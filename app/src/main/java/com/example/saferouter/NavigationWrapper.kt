@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.saferouter.data.ContactosScreen
+import com.example.saferouter.data.NotificationsScreen
 import com.example.saferouter.data.PerfilScreen
 import com.example.saferouter.data.ReportarIncidenteScreen
 import com.example.saferouter.data.SeguimientoViajeScreen
@@ -48,7 +49,7 @@ fun NavigationWrapper(
     // Mientras Firebase aún carga el estado del usuario (unos ms), no dibujamos nada
     if (startDestination == null) return
 
-    NavHost(navController = navHostController, startDestination = startDestination!!) {
+    NavHost(navController = navHostController, startDestination = "initial") {
 
         composable("initial") {
             InitialScreen(
@@ -82,6 +83,7 @@ fun NavigationWrapper(
                 navigateToContacts = { navHostController.navigate("contacts") },
                 navigateToTripTracking = { navHostController.navigate("trip_tracking") },
                 navigateToIncidentReport = { navHostController.navigate("incident_report") },
+                navigateToNotifications = { navHostController.navigate("notifications") },
                 onLogout = {
                     AuthManager.logout()
                     Toast.makeText(context, "✅ Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
@@ -124,6 +126,13 @@ fun NavigationWrapper(
         composable("resetPassword") {
             ResetPasswordScreen(
                 auth = auth,
+                navigateBack = { navHostController.popBackStack() }
+            )
+        }
+
+        // Agrega esta ruta a tu navegación
+        composable("notifications") {
+            NotificationsScreen(
                 navigateBack = { navHostController.popBackStack() }
             )
         }

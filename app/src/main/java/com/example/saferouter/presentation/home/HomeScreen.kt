@@ -30,6 +30,7 @@ fun HomeScreen(
     navigateToContacts: () -> Unit,
     navigateToTripTracking: () -> Unit,
     navigateToIncidentReport: () -> Unit,
+    navigateToNotifications: () -> Unit,
     onLogout: () -> Unit
 ) {
     Column(
@@ -175,6 +176,34 @@ fun HomeScreen(
                         fontSize = 16.sp
                     )
                 }
+
+                // En HomeScreen.kt, dentro del Column de botones, agrega:
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Botón Notificaciones
+                Button(
+                    onClick = navigateToNotifications, // Agrega este parámetro a tu función
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 12.dp
+                    )
+                ) {
+                    Text(
+                        text = "Notificaciones",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Boton de salir
                 Button(onClick = { onLogout() }) {
                     Text("Cerrar sesión")
                 }
@@ -204,6 +233,7 @@ fun HomeScreenPreview() {
         navigateToContacts = {},
         navigateToTripTracking = {},
         navigateToIncidentReport = {},
+        navigateToNotifications = {},
         onLogout = {}
     )
 }

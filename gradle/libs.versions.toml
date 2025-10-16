@@ -19,6 +19,7 @@ firebaseFirestore = "24.10.2"
 coil = "2.5.0"
 firebaseStorageKtx = "22.0.1"
 playServicesLocation = "21.3.0"
+coroutines = "1.7.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -37,14 +38,21 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material = { group = "androidx.compose.material", name = "material", version.ref = "androidx-material" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
+# Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx", version.ref = "firebaseAuth" }
-firebase-database = { group = "com.google.firebase", name = "firebase-database-ktx", version.ref = "firebaseDatabase" }
-firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestore" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" } # ← Sin version.ref
+firebase-database = { group = "com.google.firebase", name = "firebase-database-ktx" } # ← Sin version.ref
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore-ktx" } # ← Sin version.ref
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics-ktx" }
-
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx", version.ref = "firebaseStorageKtx" }
+
+# Coroutines
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines" }
+
+# Otras librerías
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]

@@ -57,17 +57,32 @@ dependencies {
     implementation(libs.androidx.material)
     implementation(libs.androidx.navigation.compose)
 
-    // Firebase
+    // Firebase - SOLO el BOM y las dependencias sin versión
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.crashlytics)
+    implementation("com.google.firebase:firebase-storage-ktx") // Sin versión
 
-    // Coil para imágenes
-    implementation(libs.coil.compose)
-    implementation("com.google.firebase:firebase-storage-ktx")
+    // Coroutines - AGREGAR ESTAS
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    // Location y Coil
     implementation(libs.play.services.location)
+    implementation(libs.coil.compose)
+
+    // Google Maps Services para calcular rutas
+    implementation("com.google.maps:google-maps-services:2.2.0")
+    implementation("org.slf4j:slf4j-simple:1.7.25")
+
+    // Google Maps para Android
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

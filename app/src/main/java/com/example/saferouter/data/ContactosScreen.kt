@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -23,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.saferouter.R
 import com.example.saferouter.presentation.model.Contact
 import com.example.saferouter.ui.theme.*
@@ -52,12 +54,22 @@ fun ContactosScreen(
         if (granted) {
             contacts.value = getAllPhoneContacts(context)
         } else {
-            Toast.makeText(context, "Se necesita permiso para leer contactos", Toast.LENGTH_LONG).show()
+            // Mostrar explicación de por qué se necesita el permiso
+            Toast.makeText(context, "El permiso de contactos es necesario para agregar contactos de emergencia", Toast.LENGTH_LONG).show()
         }
     }
 
     LaunchedEffect(Unit) {
-        permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        val hasContactPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasContactPermission) {
+            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        } else {
+            contacts.value = getAllPhoneContacts(context)
+        }
     }
 
     // Cargar contactos ya guardados en Firestore y marcar como seleccionados
@@ -303,7 +315,7 @@ fun ContactItem(
                     modifier = Modifier.size(32.dp).padding(4.dp)
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.message), // un ícono tipo mensaje
+                        painter = painterResource(R.drawable.ic_notifications), // un ícono tipo mensaje
                         contentDescription = "Invitar",
                         tint = PrimaryBlueDark,
                         modifier = Modifier.size(20.dp)
