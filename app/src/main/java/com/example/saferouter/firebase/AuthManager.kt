@@ -59,6 +59,11 @@ object AuthManager {
         Log.d(TAG, "Usuario cerró sesión.")
     }
 
+    // ✅ ESTA ES LA FUNCIÓN CORRECTA Y VISIBLE
+    fun isUserLoggedIn(): Boolean {
+        return auth.currentUser != null
+    }
+
     fun getCurrentUserName(): String? {
         return auth.currentUser?.displayName
     }

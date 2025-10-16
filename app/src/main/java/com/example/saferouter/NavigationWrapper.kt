@@ -33,6 +33,14 @@ fun NavigationWrapper(
             val user = firebaseAuth.currentUser
             startDestination = if (user != null) "home" else "initial"
         }
+
+        // 🔹 Agregamos el listener
+        auth.addAuthStateListener(authStateListener)
+
+        // 🔹 Limpiamos al salir del composable
+        onDispose {
+            auth.removeAuthStateListener(authStateListener)
+        }
     }
 
 
@@ -42,7 +50,26 @@ fun NavigationWrapper(
 
     NavHost(navController = navHostController, startDestination = startDestination!!) {
 
-          
+        composable("initial") {
+            InitialScreen(
+                navigateToLogin = { navHostController.navigate("logIn") },
+                navigateToSignUp = { navHostController.navigate("signUp") }
+            )
+        }
+
+        composable("logIn") {
+            LoginScreen(
+                auth = auth,
+                navigateToHome = {
+                    navHostController.navigate("home") {
+                        popUpTo("initial") { inclusive = true }
+                    }
+                },
+                navigateToReset = {
+                    navHostController.navigate("resetPassword")
+                }
+            )
+        }
 
         composable("signUp") {
             SignUpScreen(auth)
