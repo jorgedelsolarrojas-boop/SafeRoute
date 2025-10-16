@@ -1,5 +1,8 @@
 package com.example.saferouter.data
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,7 +42,9 @@ data class Notification(
     val timestamp: Long = 0,
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
-    val read: Boolean = false
+    val read: Boolean = false,
+    val mapsLink: String = "",
+    val hasLiveLocation: Boolean = false
 )
 
 @Composable
@@ -55,7 +60,6 @@ fun NotificationsScreen(
     val currentUserId = remember {
         mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid ?: "")
     }
-
 
     LaunchedEffect(Unit) {
         loadNotifications(currentUserId.value, notifications, isLoading)
@@ -178,6 +182,8 @@ fun NotificationCard(
     notification: Notification,
     onMarkAsRead: (String) -> Unit
 ) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -241,6 +247,33 @@ fun NotificationCard(
                         color = TextSecondary,
                         fontSize = 12.sp
                     )
+
+                    // Mostrar botón de Maps si está disponible
+                    if (notification.mapsLink.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(notification.mapsLink))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "No se pudo abrir Google Maps", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(36.dp),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = SuccessGreen),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "🗺️ Ver en Google Maps",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
                 "trip_ended" -> {
                     Text(
@@ -269,6 +302,33 @@ fun NotificationCard(
                         color = TextSecondary,
                         fontSize = 12.sp
                     )
+
+                    // Botón para ver en Maps
+                    if (notification.mapsLink.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(notification.mapsLink))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "No se pudo abrir Google Maps", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(36.dp),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "🗺️ Ver ubicación en Maps",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
 
@@ -325,7 +385,9 @@ private fun loadNotifications(
                         timestamp = child.child("timestamp").getValue(Long::class.java) ?: 0,
                         latitude = child.child("latitude").getValue(Double::class.java) ?: 0.0,
                         longitude = child.child("longitude").getValue(Double::class.java) ?: 0.0,
-                        read = child.child("read").getValue(Boolean::class.java) ?: false
+                        read = child.child("read").getValue(Boolean::class.java) ?: false,
+                        mapsLink = child.child("mapsLink").getValue(String::class.java) ?: "",
+                        hasLiveLocation = child.child("hasLiveLocation").getValue(Boolean::class.java) ?: false
                     )
                     notificationList.add(notification)
                 } catch (e: Exception) {
@@ -381,7 +443,8 @@ fun NotificationCardPreview() {
         estimatedTime = "15 minutos",
         startTime = "13:45",
         timestamp = System.currentTimeMillis(),
-        read = false
+        read = false,
+        mapsLink = "https://maps.google.com/maps?q=-12.0464,-77.0428&z=15"
     )
 
     NotificationCard(

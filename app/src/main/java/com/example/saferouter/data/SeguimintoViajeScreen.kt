@@ -31,6 +31,10 @@ import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SeguimientoViajeScreen(
@@ -39,10 +43,11 @@ fun SeguimientoViajeScreen(
     context: Context
 ) {
     val destination = remember { mutableStateOf("") }
-    val estimatedTime = remember { mutableStateOf("Calculando...") }
+    val estimatedTime = remember { mutableStateOf("Ingresa un destino") }
     var isTraveling by remember { mutableStateOf(false) }
     val currentLocation = remember { mutableStateOf<Location?>(null) }
 
+    // Usa RouteCalculator con geocodificación real
     val routeCalculator = remember { RouteCalculator(context) }
 
     // Obtener ubicación actual para calcular tiempo
@@ -61,24 +66,42 @@ fun SeguimientoViajeScreen(
     // Calcular tiempo estimado cuando cambia el destino
     LaunchedEffect(destination.value) {
         if (destination.value.isNotEmpty() && !isTraveling) {
-            // Calcular tiempo estimado cuando se ingresa un destino
+            estimatedTime.value = "Calculando..."
+
             if (ActivityCompat.checkSelfPermission(
                     context,
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
                 fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                    location?.let {
-                        currentLocation.value = it
-                        val calculatedTime = routeCalculator.calculateTravelTimeSimple(
-                            it,
-                            destination.value
-                        )
-                        estimatedTime.value = calculatedTime
+                    location?.let { currentLoc ->
+                        currentLocation.value = currentLoc
+
+                        // Calcular en un coroutine scope
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val calculatedTime = routeCalculator.calculateTravelTimeSimple(
+                                    currentLoc,
+                                    destination.value
+                                )
+
+                                withContext(Dispatchers.Main) {
+                                    estimatedTime.value = calculatedTime
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    estimatedTime.value = "Error calculando ruta"
+                                }
+                            }
+                        }
+                    } ?: run {
+                        estimatedTime.value = "Ubicación no disponible"
                     }
+                }.addOnFailureListener {
+                    estimatedTime.value = "Error obteniendo ubicación"
                 }
             } else {
-                estimatedTime.value = "Permiso de ubicación necesario"
+                estimatedTime.value = "Sin permisos de ubicación"
             }
         } else if (destination.value.isEmpty()) {
             estimatedTime.value = "Ingresa un destino"
@@ -136,13 +159,13 @@ fun SeguimientoViajeScreen(
                 ) {
                     Text(
                         text = if (isTraveling) "🚗 Viaje en curso" else "🛑 No hay viaje activo",
-                        color = if (isTraveling) Color.Green else Color.Red,
+                        color = if (isTraveling) SuccessGreen else AlertRed,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = if (isTraveling) "Tu ubicación está siendo compartida" else "Ingresa un destino para comenzar",
-                        color = PrimaryBlue,
+                        color = TextSecondary,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(top = 8.dp)
                     )
@@ -163,7 +186,12 @@ fun SeguimientoViajeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 20.dp),
-                placeholder = { Text("e.j. Centro de Lima, Miraflores, San Isidro") },
+                placeholder = {
+                    Text(
+                        "Ej: Miraflores, Centro de Lima, Jockey Plaza",
+                        color = TextSecondary
+                    )
+                },
                 colors = TextFieldDefaults.textFieldColors(
                     backgroundColor = BackgroundWhite,
                     textColor = TextPrimary,
@@ -171,10 +199,11 @@ fun SeguimientoViajeScreen(
                     focusedIndicatorColor = PrimaryBlue,
                     unfocusedIndicatorColor = TextSecondary
                 ),
-                enabled = !isTraveling
+                enabled = !isTraveling,
+                singleLine = true
             )
 
-            // Tiempo estimado
+            // Tiempo estimado con indicador de carga
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -183,19 +212,86 @@ fun SeguimientoViajeScreen(
                 shape = RoundedCornerShape(12.dp),
                 backgroundColor = PrimaryBlueLight.copy(alpha = 0.1f)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
                     Text(
                         text = "Tiempo Estimado",
                         color = TextSecondary,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
-                    Text(
-                        text = estimatedTime.value,
-                        color = PrimaryBlueDark,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+
+                    if (estimatedTime.value == "Calculando...") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = PrimaryBlue
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Calculando ruta...",
+                                color = PrimaryBlueDark,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = estimatedTime.value,
+                            color = PrimaryBlueDark,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // Información adicional cuando hay un destino válido
+            if (destination.value.isNotEmpty() && estimatedTime.value != "Calculando..."
+                && estimatedTime.value != "Ingresa un destino"
+                && !estimatedTime.value.startsWith("Error")
+                && !estimatedTime.value.startsWith("Sin")
+                && !estimatedTime.value.startsWith("Ubicación")) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    elevation = 1.dp,
+                    shape = RoundedCornerShape(12.dp),
+                    backgroundColor = BackgroundWhite
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_location_24),
+                                contentDescription = null,
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Tu destino: ${destination.value}",
+                                color = TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Text(
+                            text = "Tus contactos de emergencia serán notificados al iniciar el viaje",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
 
@@ -267,7 +363,7 @@ fun SeguimientoViajeScreen(
                             Toast.makeText(context, "✅ Viaje finalizado correctamente", Toast.LENGTH_SHORT).show()
                             isTraveling = false
                             destination.value = ""
-                            estimatedTime.value = "Calculando..."
+                            estimatedTime.value = "Ingresa un destino"
                             val intent = Intent(context, TravelLocationService::class.java)
                             context.stopService(intent)
                         }.addOnFailureListener {
@@ -284,12 +380,26 @@ fun SeguimientoViajeScreen(
                 shape = RoundedCornerShape(16.dp),
                 enabled = if (!isTraveling) destination.value.isNotEmpty() else true
             ) {
-                Text(
-                    text = if (isTraveling) "Finalizar Viaje" else "✓ Iniciar Viaje",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            id = if (isTraveling) R.drawable.ic_pause else R.drawable.ic_play
+                        ),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isTraveling) "Finalizar Viaje" else "Iniciar Viaje",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
             }
         }
     }

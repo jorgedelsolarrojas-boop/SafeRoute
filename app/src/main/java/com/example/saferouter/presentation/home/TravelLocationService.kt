@@ -37,6 +37,7 @@ class TravelLocationService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.d("TravelLocationService", "onCreate() - Inicializando servicio")
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         createNotificationChannel()
 
@@ -44,6 +45,7 @@ class TravelLocationService : Service() {
             override fun onLocationResult(result: LocationResult) {
                 super.onLocationResult(result)
                 for (location in result.locations) {
+                    Log.d("TravelLocationService", "Nueva ubicación: ${location.latitude}, ${location.longitude}")
                     sendLocationToFirebase(location)
                     notifyContactsWithLocation(location)
                 }
@@ -52,7 +54,7 @@ class TravelLocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("TravelLocationService", "Servicio iniciado")
+        Log.d("TravelLocationService", "onStartCommand() - Servicio iniciado")
 
         val notification = createForegroundNotification()
         startForeground(1, notification)
@@ -66,17 +68,29 @@ class TravelLocationService : Service() {
     }
 
     private fun notifyContactsTripStarted() {
-        val user = auth.currentUser ?: return
+        val user = auth.currentUser ?: run {
+            Log.w("TravelLocationService", "Usuario no autenticado")
+            return
+        }
         val userUid = user.uid
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                Log.d("TravelLocationService", "Iniciando notificación de viaje para UID: $userUid")
+
+                // DEBUG: Ver qué contactos hay en Firestore
+                debugUserContacts(userUid)
+
                 // Obtener información del usuario
                 val userDoc = db.collection("users").document(userUid).get().await()
                 val userName = userDoc.getString("name") ?: "Usuario SafeRoute"
 
-                // Obtener contactos de emergencia
-                val contacts = userDoc.get("contacts") as? List<Map<String, String>> ?: emptyList()
+                Log.d("TravelLocationService", "Nombre de usuario: $userName")
+
+                // Obtener contactos de emergencia SELECCIONADOS
+                val contactsList = userDoc.get("contacts") as? List<Map<String, String>> ?: emptyList()
+
+                Log.d("TravelLocationService", "Contactos obtenidos desde Firestore: ${contactsList.size}")
 
                 // Obtener información del viaje actual
                 val viajeSnapshot = realtimeDb.getReference("viajes/$userUid/info").get().await()
@@ -86,10 +100,13 @@ class TravelLocationService : Service() {
                 val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                 val startTime = dateFormat.format(Date())
 
-                // NOTIFICACIÓN DE PRUEBA - Crear una notificación para el usuario actual también
+                Log.d("TravelLocationService", "Info viaje - Destino: $destino, Tiempo: $tiempoEstimado")
+                Log.d("TravelLocationService", "Contactos a notificar: ${contactsList.size}")
+
+                // 🔔 NOTIFICACIÓN PARA EL USUARIO ACTUAL (TÚ)
                 val selfNotificationData = mapOf(
                     "type" to "trip_started",
-                    "userName" to userName,
+                    "userName" to "Tú",
                     "userUid" to userUid,
                     "destination" to destino,
                     "estimatedTime" to tiempoEstimado,
@@ -98,65 +115,140 @@ class TravelLocationService : Service() {
                     "read" to false
                 )
 
-                // Guardar notificación para el usuario actual (usando su UID como identificador)
                 realtimeDb.getReference("notifications/$userUid")
                     .push()
                     .setValue(selfNotificationData)
+                    .await()
 
-                Log.d("TravelLocationService", "Notificación de prueba creada para el usuario")
+                Log.d("TravelLocationService", "✅ Notificación creada para el usuario actual")
 
-                // Notificar a cada contacto (funcionalidad original)
-                for (contact in contacts) {
+                // 🔔 NOTIFICAR A CONTACTOS SELECCIONADOS CON ENLACE DE MAPA
+                for ((index, contact) in contactsList.withIndex()) {
                     val contactName = contact["nombre"] ?: "Contacto"
                     val contactPhone = contact["telefono"] ?: ""
 
-                    val notificationData = mapOf(
-                        "type" to "trip_started",
-                        "userName" to userName,
-                        "userUid" to userUid,
-                        "destination" to destino,
-                        "estimatedTime" to tiempoEstimado,
-                        "startTime" to startTime,
-                        "timestamp" to System.currentTimeMillis(),
-                        "read" to false
-                    )
+                    Log.d("TravelLocationService", "Procesando contacto ${index + 1}/${contactsList.size}: $contactName - $contactPhone")
 
-                    realtimeDb.getReference("notifications/$contactPhone")
-                        .push()
-                        .setValue(notificationData)
+                    // Validar que el contacto tenga teléfono
+                    if (contactPhone.isNotEmpty()) {
+                        // Generar enlace de Google Maps (se actualizará con la ubicación real más tarde)
+                        val mapsLink = "https://maps.google.com/maps?q=ubicacion+en+tiempo+real"
 
-                    Log.d("TravelLocationService", "Notificado: $contactName ($contactPhone)")
+                        val notificationData = mapOf(
+                            "type" to "trip_started",
+                            "userName" to userName,
+                            "userUid" to userUid,
+                            "destination" to destino,
+                            "estimatedTime" to tiempoEstimado,
+                            "startTime" to startTime,
+                            "timestamp" to System.currentTimeMillis(),
+                            "read" to false,
+                            "mapsLink" to mapsLink,
+                            "hasLiveLocation" to true
+                        )
+
+                        val notificationRef = realtimeDb.getReference("notifications/$contactPhone")
+                            .push()
+
+                        notificationRef.setValue(notificationData).await()
+
+                        Log.d("TravelLocationService", "✅ Notificación enviada a: $contactName ($contactPhone)")
+                        Log.d("TravelLocationService", "   Ruta: notifications/$contactPhone/${notificationRef.key}")
+                    } else {
+                        Log.w("TravelLocationService", "⚠️ Contacto sin teléfono: $contactName")
+                    }
+                }
+
+                // Si no hay contactos seleccionados, loguear advertencia
+                if (contactsList.isEmpty()) {
+                    Log.w("TravelLocationService", "ℹ️ No hay contactos de emergencia seleccionados")
+                } else {
+                    Log.d("TravelLocationService", "✅ Proceso de notificación completado. Total notificados: ${contactsList.size}")
                 }
 
             } catch (e: Exception) {
-                Log.e("TravelLocationService", "Error notificando contactos: ${e.message}")
+                Log.e("TravelLocationService", "❌ Error notificando contactos: ${e.message}", e)
             }
         }
     }
 
-    private fun sendSmsNotification(phone: String, userName: String, destination: String, estimatedTime: String, startTime: String) {
-        // Aquí puedes integrar un servicio de SMS como Twilio o usar el intent de SMS nativo
-        // Por ahora solo lo logueamos
-        val message = """
-            🔔 SafeRoute - Notificación de Viaje
-            $userName ha iniciado un viaje.
-            🎯 Destino: $destination
-            ⏱️ Tiempo estimado: $estimatedTime
-            🕐 Hora de inicio: $startTime
-            Su ubicación será compartida durante el viaje.
-        """.trimIndent()
-
-        Log.d("TravelLocationService", "SMS para $phone: $message")
-
-        // Para enviar SMS real, necesitarías permisos y una implementación de SMS Manager
-        /*
+    /**
+     * Función de debug para verificar contactos en Firestore
+     */
+    private suspend fun debugUserContacts(uid: String) {
         try {
-            val smsManager = context.getSystemService(SmsManager::class.java)
-            smsManager.sendTextMessage(phone, null, message, null, null)
+            Log.d("DebugUtils", "========================================")
+            Log.d("DebugUtils", "=== DEBUG CONTACTOS DE USUARIO ===")
+            Log.d("DebugUtils", "========================================")
+            Log.d("DebugUtils", "Usuario UID: $uid")
+
+            val userDoc = db.collection("users").document(uid).get().await()
+
+            if (!userDoc.exists()) {
+                Log.e("DebugUtils", "❌ El documento del usuario NO EXISTE en Firestore")
+                return
+            }
+
+            Log.d("DebugUtils", "✅ Documento de usuario encontrado")
+
+            val userName = userDoc.getString("name")
+            val userEmail = userDoc.getString("email")
+            Log.d("DebugUtils", "Nombre: $userName")
+            Log.d("DebugUtils", "Email: $userEmail")
+
+            val contacts = userDoc.get("contacts")
+
+            if (contacts == null) {
+                Log.w("DebugUtils", "⚠️ Campo 'contacts' es NULL")
+                return
+            }
+
+            when (contacts) {
+                is List<*> -> {
+                    Log.d("DebugUtils", "✅ Campo 'contacts' es una Lista")
+                    Log.d("DebugUtils", "Total contactos en Firestore: ${contacts.size}")
+                    Log.d("DebugUtils", "----------------------------------------")
+
+                    if (contacts.isEmpty()) {
+                        Log.w("DebugUtils", "⚠️ La lista de contactos está VACÍA")
+                    } else {
+                        contacts.forEachIndexed { index, contact ->
+                            try {
+                                val contactMap = contact as? Map<*, *>
+                                if (contactMap != null) {
+                                    val nombre = contactMap["nombre"] as? String
+                                    val telefono = contactMap["telefono"] as? String
+
+                                    Log.d("DebugUtils", "Contacto ${index + 1}:")
+                                    Log.d("DebugUtils", "  • Nombre: $nombre")
+                                    Log.d("DebugUtils", "  • Teléfono: $telefono")
+
+                                    if (nombre.isNullOrEmpty()) {
+                                        Log.w("DebugUtils", "  ⚠️ Nombre vacío o null")
+                                    }
+                                    if (telefono.isNullOrEmpty()) {
+                                        Log.w("DebugUtils", "  ⚠️ Teléfono vacío o null")
+                                    }
+                                } else {
+                                    Log.e("DebugUtils", "  ❌ Contacto ${index + 1} NO es un Map válido")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("DebugUtils", "  ❌ Error procesando contacto ${index + 1}: ${e.message}")
+                            }
+                        }
+                    }
+                }
+                else -> {
+                    Log.e("DebugUtils", "❌ Campo 'contacts' NO es una Lista. Tipo: ${contacts::class.simpleName}")
+                }
+            }
+
+            Log.d("DebugUtils", "========================================")
+            Log.d("DebugUtils", "=== FIN DEBUG ===")
+            Log.d("DebugUtils", "========================================")
         } catch (e: Exception) {
-            Log.e("TravelLocationService", "Error enviando SMS: ${e.message}")
+            Log.e("DebugUtils", "❌ Error en debugUserContacts: ${e.message}", e)
         }
-        */
     }
 
     private fun notifyContactsWithLocation(location: Location) {
@@ -167,36 +259,91 @@ class TravelLocationService : Service() {
             try {
                 // Obtener contactos del usuario
                 val userDoc = db.collection("users").document(userUid).get().await()
-                val contacts = userDoc.get("contacts") as? List<Map<String, String>> ?: emptyList()
+                val contactsList = userDoc.get("contacts") as? List<Map<String, String>> ?: emptyList()
                 val userName = userDoc.getString("name") ?: "Usuario SafeRoute"
 
-                // Crear datos de ubicación para compartir
-                val locationData = mapOf(
+                Log.d("TravelLocationService", "Actualizando ubicación para ${contactsList.size} contactos")
+
+                // Generar enlace de Google Maps con la ubicación actual
+                val mapsLink = "https://maps.google.com/maps?q=${location.latitude},${location.longitude}&z=15"
+
+                // 🔔 NOTIFICACIÓN DE UBICACIÓN PARA EL USUARIO ACTUAL (TÚ)
+                val selfLocationNotification = mapOf(
                     "type" to "location_update",
-                    "userName" to userName,
+                    "userName" to "Tú",
                     "userUid" to userUid,
                     "latitude" to location.latitude,
                     "longitude" to location.longitude,
                     "timestamp" to System.currentTimeMillis(),
                     "speed" to location.speed,
-                    "accuracy" to location.accuracy
+                    "accuracy" to location.accuracy,
+                    "read" to false,
+                    "mapsLink" to mapsLink
                 )
 
-                // Compartir ubicación con cada contacto
-                for (contact in contacts) {
-                    val contactPhone = contact["telefono"] ?: ""
+                realtimeDb.getReference("notifications/$userUid")
+                    .push()
+                    .setValue(selfLocationNotification)
 
-                    realtimeDb.getReference("shared_locations/$contactPhone/$userUid")
-                        .setValue(locationData)
+                Log.d("TravelLocationService", "✅ Notificación de ubicación creada para usuario actual")
+
+                // 🔔 COMPARTIR UBICACIÓN CON CONTACTOS SELECCIONADOS
+                for (contact in contactsList) {
+                    val contactPhone = contact["telefono"] ?: ""
+                    val contactName = contact["nombre"] ?: "Contacto"
+
+                    if (contactPhone.isNotEmpty()) {
+                        val locationNotification = mapOf(
+                            "type" to "location_update",
+                            "userName" to userName,
+                            "userUid" to userUid,
+                            "latitude" to location.latitude,
+                            "longitude" to location.longitude,
+                            "timestamp" to System.currentTimeMillis(),
+                            "speed" to location.speed,
+                            "accuracy" to location.accuracy,
+                            "read" to false,
+                            "mapsLink" to mapsLink
+                        )
+
+                        // Guardar como notificación
+                        realtimeDb.getReference("notifications/$contactPhone")
+                            .push()
+                            .setValue(locationNotification)
+
+                        // También guardar en shared_locations para acceso rápido
+                        val locationData = mapOf(
+                            "type" to "location_update",
+                            "userName" to userName,
+                            "userUid" to userUid,
+                            "latitude" to location.latitude,
+                            "longitude" to location.longitude,
+                            "timestamp" to System.currentTimeMillis(),
+                            "speed" to location.speed,
+                            "accuracy" to location.accuracy,
+                            "mapsLink" to mapsLink
+                        )
+
+                        realtimeDb.getReference("shared_locations/$contactPhone/$userUid")
+                            .setValue(locationData)
+                            .addOnSuccessListener {
+                                Log.d("TravelLocationService", "Ubicación compartida con: $contactName ($contactPhone)")
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("TravelLocationService", "Error compartiendo ubicación con $contactName: ${e.message}")
+                            }
+                    }
                 }
 
             } catch (e: Exception) {
-                Log.e("TravelLocationService", "Error compartiendo ubicación: ${e.message}")
+                Log.e("TravelLocationService", "Error compartiendo ubicación: ${e.message}", e)
             }
         }
     }
 
     private fun startLocationUpdates() {
+        Log.d("TravelLocationService", "Iniciando actualizaciones de ubicación")
+
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY, 5000L
         ).setMinUpdateIntervalMillis(3000L).build()
@@ -210,11 +357,12 @@ class TravelLocationService : Service() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.w("TravelLocationService", "Permisos de ubicación no concedidos")
+            Log.w("TravelLocationService", "❌ Permisos de ubicación no concedidos")
             return
         }
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, mainLooper)
+        Log.d("TravelLocationService", "✅ Actualizaciones de ubicación configuradas")
     }
 
     private fun sendLocationToFirebase(location: Location) {
@@ -234,10 +382,10 @@ class TravelLocationService : Service() {
 
         dbRef.push().setValue(data)
             .addOnSuccessListener {
-                Log.d("TravelLocationService", "Ubicación enviada: $data")
+                Log.d("TravelLocationService", "✅ Ubicación enviada a Firebase: (${location.latitude}, ${location.longitude})")
             }
             .addOnFailureListener {
-                Log.e("TravelLocationService", "Error al enviar ubicación: ${it.message}")
+                Log.e("TravelLocationService", "❌ Error al enviar ubicación: ${it.message}")
             }
     }
 
@@ -267,13 +415,14 @@ class TravelLocationService : Service() {
             )
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(serviceChannel)
+            Log.d("TravelLocationService", "Canal de notificación creado")
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         fusedLocationClient.removeLocationUpdates(locationCallback)
-        Log.d("TravelLocationService", "Servicio detenido")
+        Log.d("TravelLocationService", "onDestroy() - Servicio detenido")
 
         // Notificar a contactos que el viaje finalizó
         notifyContactsTripEnded()
@@ -285,32 +434,65 @@ class TravelLocationService : Service() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                Log.d("TravelLocationService", "Notificando fin de viaje para UID: $userUid")
+
                 val userDoc = db.collection("users").document(userUid).get().await()
-                val contacts = userDoc.get("contacts") as? List<Map<String, String>> ?: emptyList()
+                val contactsList = userDoc.get("contacts") as? List<Map<String, String>> ?: emptyList()
                 val userName = userDoc.getString("name") ?: "Usuario SafeRoute"
 
                 val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                 val endTime = dateFormat.format(Date())
 
-                for (contact in contacts) {
+                Log.d("TravelLocationService", "Notificando fin de viaje a ${contactsList.size} contactos")
+
+                // 🔔 NOTIFICACIÓN DE FIN DE VIAJE PARA EL USUARIO ACTUAL (TÚ)
+                val selfEndNotification = mapOf(
+                    "type" to "trip_ended",
+                    "userName" to "Tú",
+                    "userUid" to userUid,
+                    "endTime" to endTime,
+                    "timestamp" to System.currentTimeMillis(),
+                    "read" to false
+                )
+
+                realtimeDb.getReference("notifications/$userUid")
+                    .push()
+                    .setValue(selfEndNotification)
+                    .await()
+
+                Log.d("TravelLocationService", "✅ Notificación de fin creada para el usuario actual")
+
+                // 🔔 NOTIFICAR A CONTACTOS SELECCIONADOS
+                for ((index, contact) in contactsList.withIndex()) {
                     val contactPhone = contact["telefono"] ?: ""
+                    val contactName = contact["nombre"] ?: "Contacto"
 
-                    val endNotification = mapOf(
-                        "type" to "trip_ended",
-                        "userName" to userName,
-                        "userUid" to userUid,
-                        "endTime" to endTime,
-                        "timestamp" to System.currentTimeMillis(),
-                        "read" to false
-                    )
+                    if (contactPhone.isNotEmpty()) {
+                        val endNotification = mapOf(
+                            "type" to "trip_ended",
+                            "userName" to userName,
+                            "userUid" to userUid,
+                            "endTime" to endTime,
+                            "timestamp" to System.currentTimeMillis(),
+                            "read" to false
+                        )
 
-                    realtimeDb.getReference("notifications/$contactPhone")
-                        .push()
-                        .setValue(endNotification)
+                        realtimeDb.getReference("notifications/$contactPhone")
+                            .push()
+                            .setValue(endNotification)
+                            .addOnSuccessListener {
+                                Log.d("TravelLocationService", "✅ Notificación de fin enviada a: $contactName ($contactPhone)")
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("TravelLocationService", "❌ Error enviando notificación a $contactName: ${e.message}")
+                            }
+                    }
                 }
 
+                Log.d("TravelLocationService", "✅ Proceso de notificación de fin completado")
+
             } catch (e: Exception) {
-                Log.e("TravelLocationService", "Error notificando fin de viaje: ${e.message}")
+                Log.e("TravelLocationService", "❌ Error notificando fin de viaje: ${e.message}", e)
             }
         }
     }
