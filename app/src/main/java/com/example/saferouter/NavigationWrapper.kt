@@ -10,6 +10,7 @@ import com.example.saferouter.data.ContactosScreen
 import com.example.saferouter.data.NotificationsScreen
 import com.example.saferouter.data.PerfilScreen
 import com.example.saferouter.data.ReportarIncidenteScreen
+import com.example.saferouter.data.RutasSegurasScreen
 import com.example.saferouter.data.SeguimientoViajeScreen
 import com.example.saferouter.firebase.AuthManager
 import com.example.saferouter.presentation.home.HomeScreen
@@ -113,9 +114,18 @@ fun NavigationWrapper(
             SeguimientoViajeScreen(
                 db = FirebaseFirestore.getInstance(),
                 navigateBack = { navHostController.popBackStack() },
+                navigateToRutasSeguras = { navHostController.navigate("rutas_seguras") },
                 context = context // PASAR EL CONTEXTO AQUÍ
             )
         }
+
+
+        composable("rutas_seguras") {
+            RutasSegurasScreen(
+                navigateBack = { navHostController.popBackStack() }
+            )
+        }
+
 
         composable("incident_report") {
             ReportarIncidenteScreen(
@@ -130,7 +140,7 @@ fun NavigationWrapper(
             )
         }
 
-        // Agrega esta ruta a tu navegación
+
         composable("notifications") {
             NotificationsScreen(
                 navigateBack = { navHostController.popBackStack() }

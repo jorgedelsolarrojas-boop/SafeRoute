@@ -40,6 +40,7 @@ import kotlinx.coroutines.withContext
 fun SeguimientoViajeScreen(
     db: FirebaseFirestore,
     navigateBack: () -> Unit,
+    navigateToRutasSeguras: () -> Unit,
     context: Context
 ) {
     val destination = remember { mutableStateOf("") }
@@ -297,6 +298,38 @@ fun SeguimientoViajeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // NUEVO BOTÓN: Ver Rutas Seguras
+            Button(
+                onClick = navigateToRutasSeguras,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(bottom = 12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = PrimaryBlue
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_location_24),
+                        contentDescription = "Rutas Seguras",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Ver Rutas Seguras",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+            }
+
             // Botón Iniciar/Finalizar viaje
             Button(
                 onClick = {
@@ -411,6 +444,7 @@ fun SeguimientoViajeScreenPreview() {
     SeguimientoViajeScreen(
         db = FirebaseFirestore.getInstance(),
         navigateBack = {},
+        navigateToRutasSeguras = {},
         context = androidx.compose.ui.platform.LocalContext.current
     )
 }
