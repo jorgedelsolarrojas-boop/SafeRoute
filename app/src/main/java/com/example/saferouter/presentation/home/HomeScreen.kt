@@ -29,7 +29,6 @@ fun HomeScreen(
     navigateToProfile: () -> Unit,
     navigateToContacts: () -> Unit,
     navigateToTripTracking: () -> Unit,
-    navigateToIncidentReport: () -> Unit,
     navigateToNotifications: () -> Unit,
     navigateToReportarIncidente: () -> Unit,
     navigateToMapaComunitario: () -> Unit,
@@ -158,29 +157,6 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Botón Reportes de Incidentes
-                Button(
-                    onClick = navigateToIncidentReport,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
-                    shape = RoundedCornerShape(14.dp),
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 6.dp,
-                        pressedElevation = 12.dp
-                    )
-                ) {
-                    Text(
-                        text = "Reportes de Incidentes",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
                 // Botón Reportar Incidente
                 Button(
                     onClick = navigateToReportarIncidente,
@@ -279,7 +255,6 @@ fun HomeScreenPreview() {
         navigateToProfile = {},
         navigateToContacts = {},
         navigateToTripTracking = {},
-        navigateToIncidentReport = {},
         navigateToNotifications = {},
         navigateToReportarIncidente = {},
         navigateToMapaComunitario = {},

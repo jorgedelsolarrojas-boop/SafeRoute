@@ -82,7 +82,6 @@ fun NavigationWrapper(
                 navigateToProfile = { navHostController.navigate("profile") },
                 navigateToContacts = { navHostController.navigate("contacts") },
                 navigateToTripTracking = { navHostController.navigate("trip_tracking") },
-                navigateToIncidentReport = { navHostController.navigate("incident_report") },
                 navigateToNotifications = { navHostController.navigate("notifications") },
                 navigateToReportarIncidente = { navHostController.navigate("reportar_incidente") },
                 navigateToMapaComunitario = { navHostController.navigate("mapa_comunitario") },
@@ -123,14 +122,6 @@ fun NavigationWrapper(
         composable("rutas_seguras") {
             RutasSegurasScreen(
                 navigateBack = { navHostController.popBackStack() }
-            )
-        }
-
-        composable("incident_report") {
-            ReportarIncidenteScreen(
-                db = FirebaseFirestore.getInstance(),
-                navigateBack = { navHostController.popBackStack() },
-                context = context
             )
         }
 
