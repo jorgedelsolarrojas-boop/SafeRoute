@@ -10,7 +10,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.saferouter"
+        applicationId = "com.example.saferoute"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -42,7 +42,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.7"
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
     packaging {
         resources {
@@ -78,7 +78,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
 
-    // Google Play Services (sin duplicados)
+    // Google Play Services
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
 
@@ -88,10 +88,18 @@ dependencies {
 
     // Coil para imágenes
     implementation(libs.coil.compose)
-    implementation("io.coil-kt:coil-compose:2.5.0")
 
-    //charts
+    // Charts
     implementation(libs.tehras.charts)
+
+    // NUEVAS DEPENDENCIAS PARA HU06 (Unidad 6 - Persistencia)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // WorkManager para tareas en segundo plano (Unidad 6)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Lifecycle ViewModel Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
     // Testing
     testImplementation(libs.junit)

@@ -22,6 +22,7 @@ import com.example.saferouter.presentation.reset.ResetPasswordScreen
 import com.example.saferouter.presentation.signup.SignUpScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.saferouter.presentation.settings.NotificationSettingsScreen
 
 @Composable
 fun NavigationWrapper(
@@ -38,10 +39,10 @@ fun NavigationWrapper(
             startDestination = if (user != null) "home" else "initial"
         }
 
-        // 🔹 Agregamos el listener
+        //  Agregamos el listener
         auth.addAuthStateListener(authStateListener)
 
-        // 🔹 Limpiamos al salir del composable
+        //  Limpiamos al salir del composable
         onDispose {
             auth.removeAuthStateListener(authStateListener)
         }
@@ -51,7 +52,11 @@ fun NavigationWrapper(
     if (startDestination == null) return
 
     NavHost(navController = navHostController, startDestination = "initial") {
-
+        composable(route = "notificationSettings") {
+            NotificationSettingsScreen(
+                navigateBack = { navHostController.popBackStack() }
+            )
+        }
         composable("initial") {
             InitialScreen(
                 navigateToLogin = { navHostController.navigate("logIn") },
@@ -88,7 +93,8 @@ fun NavigationWrapper(
                 navigateToMapaComunitario = { navHostController.navigate("mapaComunitario") },
                 onLogout = {
                     AuthManager.logout()
-                    Toast.makeText(context, "✅ Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, " Sesión cerrada correctamente", Toast.LENGTH_SHORT)
+                        .show()
                     navHostController.navigate("logIn") {
                         popUpTo("home") { inclusive = true }
                     }
@@ -139,7 +145,7 @@ fun NavigationWrapper(
             MapaComunitarioScreen(
                 db = FirebaseFirestore.getInstance(),
                 navigateBack = { navHostController.popBackStack() },
-                navigateToReportes = { navHostController.navigate("reportesComunitarios")},
+                navigateToReportes = { navHostController.navigate("reportesComunitarios") },
                 context = context
             )
         }
@@ -165,4 +171,5 @@ fun NavigationWrapper(
             )
         }
     }
+
 }
