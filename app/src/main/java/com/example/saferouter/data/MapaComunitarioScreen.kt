@@ -40,6 +40,7 @@ import java.util.*
 fun MapaComunitarioScreen(
     db: FirebaseFirestore,
     navigateBack: () -> Unit,
+    navigateToReportes: () -> Unit, // Nuevo parámetro para navegación
     context: Context
 ) {
     val reportes = remember { mutableStateOf<List<Reporte>>(emptyList()) }
@@ -49,6 +50,9 @@ fun MapaComunitarioScreen(
 
     // Estado para puntos totales del usuario
     val puntosTotales = remember { mutableStateOf(0) }
+
+    // Estado para manejar errores
+    val errorMessage = remember { mutableStateOf<String?>(null) }
 
     // Obtener reportes en tiempo real
     var listenerRegistration: ListenerRegistration? by remember { mutableStateOf(null) }
@@ -102,148 +106,189 @@ fun MapaComunitarioScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(PrimaryBlueLight, BackgroundWhite),
-                    startY = 0f,
-                    endY = 1000f
-                )
-            )
-    ) {
-        // Header
-        Row(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = navigateBack,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_back_24),
-                    contentDescription = "Back",
-                    tint = PrimaryBlueDark
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(PrimaryBlueLight, BackgroundWhite),
+                        startY = 0f,
+                        endY = 1000f
+                    )
                 )
-            }
-            Text(
-                text = "Mapa Comunitario",
-                color = PrimaryBlueDark,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 16.dp)
-            )
-        }
-
-        // Estadísticas
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            elevation = 4.dp,
-            shape = RoundedCornerShape(16.dp),
-            backgroundColor = BackgroundWhite.copy(alpha = 0.9f)
         ) {
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceAround
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "30 minutos",
-                        color = PrimaryBlueDark,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Tiempo activo",
-                        color = TextSecondary,
-                        fontSize = 12.sp
+                IconButton(
+                    onClick = navigateBack,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_back_24),
+                        contentDescription = "Back",
+                        tint = PrimaryBlueDark
                     )
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = reportes.value.size.toString(),
-                        color = PrimaryBlueDark,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Reportes",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
+                Text(
+                    text = "Mapa Comunitario",
+                    color = PrimaryBlueDark,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
+
+            // Estadísticas
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp),
+                backgroundColor = BackgroundWhite.copy(alpha = 0.9f)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "30 minutos",
+                            color = PrimaryBlueDark,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Tiempo activo",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = reportes.value.size.toString(),
+                            color = PrimaryBlueDark,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Reportes",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = puntosTotales.value.toString(),
+                            color = PrimaryBlueDark,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Puntos",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = puntosTotales.value.toString(),
-                        color = PrimaryBlueDark,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Puntos",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
+            }
+
+            // Lista de reportes
+            Text(
+                text = "Reportes cercanos",
+                color = TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            if (reportes.value.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_report),
+                            contentDescription = "Sin reportes",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Text(
+                            text = "No hay reportes cercanos",
+                            color = TextSecondary,
+                            fontSize = 16.sp,
+                            modifier = Modifier.padding(top = 16.dp)
+                        )
+                        Text(
+                            text = "Sé el primero en reportar un incidente",
+                            color = TextSecondary,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 88.dp) // Espacio para el botón
+                ) {
+                    items(reportes.value) { reporte ->
+                        ReporteComunitarioCard(reporte = reporte, context = context)
+                    }
                 }
             }
         }
 
-        // Lista de reportes
-        Text(
-            text = "Reportes cercanos",
-            color = TextPrimary,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-
-        if (reportes.value.isEmpty()) {
-            Box(
+        // Botón "Ver reportes" en la parte inferior
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            BackgroundWhite.copy(alpha = 0.95f)
+                        )
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            Button(
+                onClick = navigateToReportes,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = PrimaryBlueDark
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = ButtonDefaults.elevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp
+                )
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_report),
-                        contentDescription = "Sin reportes",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Text(
-                        text = "No hay reportes cercanos",
-                        color = TextSecondary,
-                        fontSize = 16.sp,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
-                    Text(
-                        text = "Sé el primero en reportar un incidente",
-                        color = TextSecondary,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(reportes.value) { reporte ->
-                    ReporteComunitarioCard(reporte = reporte, context = context)
-                }
+                Text(
+                    text = "📊 Ver Reportes",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
             }
         }
     }

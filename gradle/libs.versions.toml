@@ -18,6 +18,7 @@ playServicesMaps = "18.2.0"
 googleMapsServices = "2.2.0"
 slf4j = "1.7.25"
 coil = "2.5.0"
+tehras-charts = "0.2.4-alpha"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,6 +36,7 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material = { group = "androidx.compose.material", name = "material" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+tehras-charts = { group = "com.github.tehras", name = "charts", version.ref = "tehras-charts" }
 
 # Firebase (sin versión, usa BOM)
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }

@@ -11,6 +11,7 @@ import com.example.saferouter.data.MapaComunitarioScreen
 import com.example.saferouter.data.NotificationsScreen
 import com.example.saferouter.data.PerfilScreen
 import com.example.saferouter.data.ReportarIncidenteScreen
+import com.example.saferouter.data.ReportesComunitarios
 import com.example.saferouter.data.RutasSegurasScreen
 import com.example.saferouter.data.SeguimientoViajeScreen
 import com.example.saferouter.firebase.AuthManager
@@ -84,7 +85,7 @@ fun NavigationWrapper(
                 navigateToTripTracking = { navHostController.navigate("trip_tracking") },
                 navigateToNotifications = { navHostController.navigate("notifications") },
                 navigateToReportarIncidente = { navHostController.navigate("reportar_incidente") },
-                navigateToMapaComunitario = { navHostController.navigate("mapa_comunitario") },
+                navigateToMapaComunitario = { navHostController.navigate("mapaComunitario") },
                 onLogout = {
                     AuthManager.logout()
                     Toast.makeText(context, "✅ Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
@@ -133,8 +134,18 @@ fun NavigationWrapper(
             )
         }
 
-        composable("mapa_comunitario") {
+
+        composable("mapaComunitario") {
             MapaComunitarioScreen(
+                db = FirebaseFirestore.getInstance(),
+                navigateBack = { navHostController.popBackStack() },
+                navigateToReportes = { navHostController.navigate("reportesComunitarios")},
+                context = context
+            )
+        }
+
+        composable("reportesComunitarios") {
+            ReportesComunitarios(
                 db = FirebaseFirestore.getInstance(),
                 navigateBack = { navHostController.popBackStack() },
                 context = context

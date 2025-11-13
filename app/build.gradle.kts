@@ -90,6 +90,9 @@ dependencies {
     implementation(libs.coil.compose)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    //charts
+    implementation(libs.tehras.charts)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
