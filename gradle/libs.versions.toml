@@ -1,25 +1,23 @@
 [versions]
-agp = "8.4.0"
+agp = "8.7.3"
 kotlin = "1.9.21"
-coreKtx = "1.12.0"
+coreKtx = "1.15.0"
 junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
-lifecycleRuntimeKtx = "2.7.0"
-activityCompose = "1.8.2"
-composeBom = "2023.10.01"
-androidx-material = "1.6.1"
-googleGmsGoogleServices = "4.4.0"
-firebaseDatabase = "20.3.0"
-firebaseBom = "32.7.2"
-crashlytics = "2.9.9"
-navigationCompose = "2.7.5"
-firebaseAuth = "22.3.1"
-firebaseFirestore = "24.10.2"
-coil = "2.5.0"
-firebaseStorageKtx = "22.0.1"
-playServicesLocation = "21.3.0"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.9.3"
+composeBom = "2024.04.01"
+googleGmsGoogleServices = "4.4.2"
+firebaseBom = "33.7.0"
+navigationCompose = "2.8.5"
+crashlytics = "3.0.2"
 coroutines = "1.7.3"
+playServicesLocation = "21.0.1"
+playServicesMaps = "18.2.0"
+googleMapsServices = "2.2.0"
+slf4j = "1.7.25"
+coil = "2.5.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,25 +33,32 @@ androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-material = { group = "androidx.compose.material", name = "material", version.ref = "androidx-material" }
+androidx-material = { group = "androidx.compose.material", name = "material" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
-# Firebase
+# Firebase (sin versión, usa BOM)
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" } # ← Sin version.ref
-firebase-database = { group = "com.google.firebase", name = "firebase-database-ktx" } # ← Sin version.ref
-firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore-ktx" } # ← Sin version.ref
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" }
+firebase-database = { group = "com.google.firebase", name = "firebase-database-ktx" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore-ktx" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics-ktx" }
-firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx", version.ref = "firebaseStorageKtx" }
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage-ktx" }
 
 # Coroutines
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
-kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
-kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
-# Otras librerías
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+# Google Play Services
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+
+# Google Maps Services
+google-maps-services = { group = "com.google.maps", name = "google-maps-services", version.ref = "googleMapsServices" }
+slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
+
+# Coil para imágenes
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

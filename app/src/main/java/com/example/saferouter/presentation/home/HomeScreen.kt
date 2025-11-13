@@ -31,6 +31,8 @@ fun HomeScreen(
     navigateToTripTracking: () -> Unit,
     navigateToIncidentReport: () -> Unit,
     navigateToNotifications: () -> Unit,
+    navigateToReportarIncidente: () -> Unit,
+    navigateToMapaComunitario: () -> Unit,
     onLogout: () -> Unit
 ) {
     Column(
@@ -177,12 +179,57 @@ fun HomeScreen(
                     )
                 }
 
-                // En HomeScreen.kt, dentro del Column de botones, agrega:
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Botón Reportar Incidente
+                Button(
+                    onClick = navigateToReportarIncidente,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 12.dp
+                    )
+                ) {
+                    Text(
+                        text = "📝 Reportar Incidente",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Botón Mapa Comunitario
+                Button(
+                    onClick = navigateToMapaComunitario,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 12.dp
+                    )
+                ) {
+                    Text(
+                        text = "🗺️ Mapa Comunitario",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Botón Notificaciones
                 Button(
-                    onClick = navigateToNotifications, // Agrega este parámetro a tu función
+                    onClick = navigateToNotifications,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -234,6 +281,8 @@ fun HomeScreenPreview() {
         navigateToTripTracking = {},
         navigateToIncidentReport = {},
         navigateToNotifications = {},
+        navigateToReportarIncidente = {},
+        navigateToMapaComunitario = {},
         onLogout = {}
     )
 }

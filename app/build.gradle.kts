@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.example.saferouter"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.saferouter"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -44,12 +44,20 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.7"
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 dependencies {
+    // AndroidX Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -57,30 +65,30 @@ dependencies {
     implementation(libs.androidx.material)
     implementation(libs.androidx.navigation.compose)
 
-    // Firebase - SOLO el BOM y las dependencias sin versión
+    // Firebase (BOM gestiona las versiones)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.crashlytics)
-    implementation("com.google.firebase:firebase-storage-ktx") // Sin versión
+    implementation(libs.firebase.storage)
 
-    // Coroutines - AGREGAR ESTAS
+    // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
 
-    // Location y Coil
+    // Google Play Services (sin duplicados)
     implementation(libs.play.services.location)
+    implementation(libs.play.services.maps)
+
+    // Google Maps Services API
+    implementation(libs.google.maps.services)
+    implementation(libs.slf4j.simple)
+
+    // Coil para imágenes
     implementation(libs.coil.compose)
-
-    // Google Maps Services para calcular rutas
-    implementation("com.google.maps:google-maps-services:2.2.0")
-    implementation("org.slf4j:slf4j-simple:1.7.25")
-
-    // Google Maps para Android
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("io.coil-kt:coil-compose:2.5.0")
 
     // Testing
     testImplementation(libs.junit)

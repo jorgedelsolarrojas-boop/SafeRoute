@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.saferouter.data.ContactosScreen
+import com.example.saferouter.data.MapaComunitarioScreen
 import com.example.saferouter.data.NotificationsScreen
 import com.example.saferouter.data.PerfilScreen
 import com.example.saferouter.data.ReportarIncidenteScreen
@@ -44,8 +45,6 @@ fun NavigationWrapper(
             auth.removeAuthStateListener(authStateListener)
         }
     }
-
-
 
     // Mientras Firebase aún carga el estado del usuario (unos ms), no dibujamos nada
     if (startDestination == null) return
@@ -85,6 +84,8 @@ fun NavigationWrapper(
                 navigateToTripTracking = { navHostController.navigate("trip_tracking") },
                 navigateToIncidentReport = { navHostController.navigate("incident_report") },
                 navigateToNotifications = { navHostController.navigate("notifications") },
+                navigateToReportarIncidente = { navHostController.navigate("reportar_incidente") },
+                navigateToMapaComunitario = { navHostController.navigate("mapa_comunitario") },
                 onLogout = {
                     AuthManager.logout()
                     Toast.makeText(context, "✅ Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
@@ -115,10 +116,9 @@ fun NavigationWrapper(
                 db = FirebaseFirestore.getInstance(),
                 navigateBack = { navHostController.popBackStack() },
                 navigateToRutasSeguras = { navHostController.navigate("rutas_seguras") },
-                context = context // PASAR EL CONTEXTO AQUÍ
+                context = context
             )
         }
-
 
         composable("rutas_seguras") {
             RutasSegurasScreen(
@@ -126,10 +126,27 @@ fun NavigationWrapper(
             )
         }
 
-
         composable("incident_report") {
             ReportarIncidenteScreen(
-                navigateBack = { navHostController.popBackStack() }
+                db = FirebaseFirestore.getInstance(),
+                navigateBack = { navHostController.popBackStack() },
+                context = context
+            )
+        }
+
+        composable("reportar_incidente") {
+            ReportarIncidenteScreen(
+                db = FirebaseFirestore.getInstance(),
+                navigateBack = { navHostController.popBackStack() },
+                context = context
+            )
+        }
+
+        composable("mapa_comunitario") {
+            MapaComunitarioScreen(
+                db = FirebaseFirestore.getInstance(),
+                navigateBack = { navHostController.popBackStack() },
+                context = context
             )
         }
 
@@ -139,7 +156,6 @@ fun NavigationWrapper(
                 navigateBack = { navHostController.popBackStack() }
             )
         }
-
 
         composable("notifications") {
             NotificationsScreen(
