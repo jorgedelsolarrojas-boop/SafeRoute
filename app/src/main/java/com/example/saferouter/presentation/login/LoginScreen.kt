@@ -1,4 +1,3 @@
-
 package com.example.saferouter.presentation.login
 
 import androidx.compose.ui.platform.LocalContext
@@ -28,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,7 +42,12 @@ import com.example.saferouter.ui.theme.TextSecondary
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun LoginScreen(auth: FirebaseAuth, navigateToHome: () -> Unit, navigateToReset: () -> Unit = {}) {
+fun LoginScreen(
+    auth: FirebaseAuth,
+    navigateToHome: () -> Unit,
+    navigateToReset: () -> Unit = {},
+    navigateBack: () -> Unit = {} //parammetro añadido para boton de arriba
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -66,7 +69,7 @@ fun LoginScreen(auth: FirebaseAuth, navigateToHome: () -> Unit, navigateToReset:
                 modifier = Modifier
                     .padding(vertical = 24.dp)
                     .size(24.dp)
-                    //.clickable { navigateBack() }
+                    .clickable { navigateBack() } // Ahora esto funciona no lo muevan xd
             )
             Spacer(modifier = Modifier.weight(1f))
         }
@@ -188,6 +191,10 @@ fun LoginScreen(auth: FirebaseAuth, navigateToHome: () -> Unit, navigateToReset:
 @Preview
 @Composable
 fun LoginScreenPreview() {
-    LoginScreen(auth = FirebaseAuth.getInstance(), navigateToHome = {})
+    LoginScreen(
+        auth = FirebaseAuth.getInstance(),
+        navigateToHome = {},
+        navigateToReset = {},
+        navigateBack = {}
+    )
 }
-

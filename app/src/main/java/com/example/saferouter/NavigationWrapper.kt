@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.saferouter.data.ContactosScreen
 import com.example.saferouter.data.MapaComunitarioScreen
+import com.example.saferouter.data.MiDashboardScreen
 import com.example.saferouter.data.NotificationsScreen
 import com.example.saferouter.data.PerfilScreen
 import com.example.saferouter.data.ReportarIncidenteScreen
@@ -74,7 +75,11 @@ fun NavigationWrapper(
                 },
                 navigateToReset = {
                     navHostController.navigate("resetPassword")
-                }
+                },
+
+                // --- AÑADE ESTA LÍNEA ---
+                navigateBack = { navHostController.popBackStack() }
+
             )
         }
 
@@ -91,6 +96,7 @@ fun NavigationWrapper(
                 navigateToNotifications = { navHostController.navigate("notifications") },
                 navigateToReportarIncidente = { navHostController.navigate("reportar_incidente") },
                 navigateToMapaComunitario = { navHostController.navigate("mapaComunitario") },
+                navigateToMiDashboard = { navHostController.navigate("mi_dashboard") },
                 onLogout = {
                     AuthManager.logout()
                     Toast.makeText(context, " Sesión cerrada correctamente", Toast.LENGTH_SHORT)
@@ -132,6 +138,16 @@ fun NavigationWrapper(
             )
         }
 
+        composable("mi_dashboard") {
+            MiDashboardScreen(
+                db = FirebaseFirestore.getInstance(),
+                auth = FirebaseAuth.getInstance(),
+                navigateBack = { navHostController.popBackStack() },
+                context = LocalContext.current
+            )
+        }
+
+
         composable("reportar_incidente") {
             ReportarIncidenteScreen(
                 db = FirebaseFirestore.getInstance(),
@@ -157,6 +173,7 @@ fun NavigationWrapper(
                 context = context
             )
         }
+
 
         composable("resetPassword") {
             ResetPasswordScreen(

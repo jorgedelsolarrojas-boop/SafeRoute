@@ -32,6 +32,7 @@ fun HomeScreen(
     navigateToNotifications: () -> Unit,
     navigateToReportarIncidente: () -> Unit,
     navigateToMapaComunitario: () -> Unit,
+    navigateToMiDashboard: () -> Unit, // <-- 1. PARÁMETRO NUEVO AÑADIDO
     onLogout: () -> Unit
 ) {
     Column(
@@ -203,6 +204,30 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // --- 👇 2. BOTÓN NUEVO AÑADIDO 👇 ---
+                Button(
+                    onClick = navigateToMiDashboard, // <-- Usa el nuevo parámetro
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = SuccessGreen), // Color diferente
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 12.dp
+                    )
+                ) {
+                    Text(
+                        text = "📊 Mi Dashboard",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+                // --- FIN DEL BOTÓN NUEVO ---
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 // Botón Notificaciones
                 Button(
                     onClick = navigateToNotifications,
@@ -258,6 +283,7 @@ fun HomeScreenPreview() {
         navigateToNotifications = {},
         navigateToReportarIncidente = {},
         navigateToMapaComunitario = {},
+        navigateToMiDashboard = {}, // <-- 3. AÑADIDO AL PREVIEW
         onLogout = {}
     )
 }
