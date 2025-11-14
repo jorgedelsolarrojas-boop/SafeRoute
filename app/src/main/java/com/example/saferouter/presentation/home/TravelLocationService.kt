@@ -46,6 +46,10 @@ class TravelLocationService : Service() {
                 super.onLocationResult(result)
                 for (location in result.locations) {
                     Log.d("TravelLocationService", "Nueva ubicación: ${location.latitude}, ${location.longitude}")
+
+                    // ⬇️ AQUI MISMO METES EL UPDATE A FIRESTORE
+                    updateUserLastLocation(location)
+
                     sendLocationToFirebase(location)
                     notifyContactsWithLocation(location)
                 }
@@ -496,6 +500,28 @@ class TravelLocationService : Service() {
             }
         }
     }
+
+    private fun updateUserLastLocation(location: Location) {
+        val uid = auth.currentUser?.uid ?: return
+
+        val updates = mapOf(
+            "lastLat" to location.latitude,
+            "lastLon" to location.longitude
+        )
+
+        FirebaseFirestore.getInstance()
+            .collection("users")
+            .document(uid)
+            .update(updates)
+            .addOnSuccessListener {
+                Log.d("TravelLocationService", "lastLat/lastLon actualizados en Firestore")
+            }
+            .addOnFailureListener {
+                Log.e("TravelLocationService", "Error actualizando ubicación en Firestore: ${it.message}")
+            }
+    }
+
+
 
     override fun onBind(intent: Intent?): IBinder? = null
 }

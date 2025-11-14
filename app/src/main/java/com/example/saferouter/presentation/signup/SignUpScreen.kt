@@ -28,6 +28,8 @@ fun SignUpScreen(
     var age by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+
     var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -87,6 +89,21 @@ fun SignUpScreen(
 
         Spacer(Modifier.height(16.dp))
 
+// 🔹 Teléfono
+        Text("Número de teléfono", color = TextPrimary, fontWeight = FontWeight.Medium)
+        TextField(
+            value = phone,
+            onValueChange = {
+                phone = it.filter { c -> c.isDigit() || c == '+' }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Ej: +51987654321") },
+            colors = textFieldColors()
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+
         // 🔹 Correo
         Text("Correo electrónico", color = TextPrimary, fontWeight = FontWeight.Medium)
         TextField(
@@ -114,9 +131,15 @@ fun SignUpScreen(
         // 🔹 Botón de registro
         Button(
             onClick = {
-                if (name.isNotBlank() && lastname.isNotBlank() &&
-                    age.isNotBlank() && email.isNotBlank() && password.isNotBlank()
-                ) {
+                if (
+                    name.isNotBlank() &&
+                    lastname.isNotBlank() &&
+                    age.isNotBlank() &&
+                    phone.isNotBlank() &&
+                    email.isNotBlank() &&
+                    password.isNotBlank()
+                )
+                {
                     isLoading = true
                     auth.createUserWithEmailAndPassword(email, password)
                         .addOnCompleteListener { task ->

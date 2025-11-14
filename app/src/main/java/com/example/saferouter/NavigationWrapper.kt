@@ -100,16 +100,17 @@ fun NavigationWrapper(
                 navigateToReportarIncidente = { navHostController.navigate("reportar_incidente") },
                 navigateToMapaComunitario = { navHostController.navigate("mapaComunitario") },
                 navigateToMiDashboard = { navHostController.navigate("mi_dashboard") },
+                navigateToNotificationSettings = { navHostController.navigate("notificationSettings") }, // <-- AÑADIDA
                 onLogout = {
                     AuthManager.logout()
-                    Toast.makeText(context, " Sesión cerrada correctamente", Toast.LENGTH_SHORT)
-                        .show()
+                    Toast.makeText(context, " Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
                     navHostController.navigate("logIn") {
                         popUpTo("home") { inclusive = true }
                     }
                 }
             )
         }
+
 
         composable("profile") {
             PerfilScreen(

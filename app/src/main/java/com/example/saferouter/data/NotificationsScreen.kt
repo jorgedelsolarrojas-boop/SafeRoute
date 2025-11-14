@@ -21,17 +21,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.saferouter.R
 import com.example.saferouter.ui.theme.*
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 data class Notification(
     val id: String = "",
+    val ownerId: String = "",   // ★ NUEVO: usuario dueño real de esta notificación
     val type: String = "",
     val userName: String = "",
     val userUid: String = "",
@@ -51,18 +48,12 @@ data class Notification(
 fun NotificationsScreen(
     navigateBack: () -> Unit
 ) {
-    val context = LocalContext.current
     val notifications = remember { mutableStateOf<List<Notification>>(emptyList()) }
     val isLoading = remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Usar el UID del usuario actual para buscar notificaciones
-    val currentUserId = remember {
-        mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid ?: "")
-    }
-
     LaunchedEffect(Unit) {
-        loadNotifications(currentUserId.value, notifications, isLoading)
+        loadNotifications(notifications, isLoading)
     }
 
     Column(
@@ -88,7 +79,7 @@ fun NotificationsScreen(
                 )
             }
             Text(
-                text = "Notificaciones de Viajes",
+                text = "Notificaciones",
                 color = PrimaryBlueDark,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
@@ -104,34 +95,7 @@ fun NotificationsScreen(
                 CircularProgressIndicator(color = PrimaryBlue)
             }
         } else if (notifications.value.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_notifications),
-                        contentDescription = "Sin notificaciones",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No hay notificaciones",
-                        color = TextSecondary,
-                        fontSize = 18.sp
-                    )
-                    Text(
-                        text = "Recibirás alertas cuando tus contactos inicien viajes",
-                        color = TextSecondary,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 32.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            }
+            EmptyNotificationsUI()
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -142,9 +106,9 @@ fun NotificationsScreen(
                 items(notifications.value.sortedByDescending { it.timestamp }) { notification ->
                     NotificationCard(
                         notification = notification,
-                        onMarkAsRead = { notificationId ->
+                        onMarkAsRead = { ownerId, notificationId ->
                             coroutineScope.launch {
-                                markNotificationAsRead(currentUserId.value, notificationId)
+                                markNotificationAsRead(ownerId, notificationId)
                             }
                         }
                     )
@@ -152,12 +116,12 @@ fun NotificationsScreen(
             }
         }
 
-        // Botón para limpiar todas las notificaciones
+        // Botón para limpiar TODAS las notificaciones del servidor
         if (notifications.value.isNotEmpty()) {
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        clearAllNotifications(currentUserId.value, notifications)
+                        clearAllNotifications(notifications)
                     }
                 },
                 modifier = Modifier
@@ -168,7 +132,7 @@ fun NotificationsScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = "Limpiar Todas las Notificaciones",
+                    text = "ELIMINAR TODAS LAS NOTIFICACIONES",
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
@@ -178,24 +142,42 @@ fun NotificationsScreen(
 }
 
 @Composable
+private fun EmptyNotificationsUI() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_notifications),
+                contentDescription = "Sin notificaciones",
+                tint = TextSecondary,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("No hay notificaciones", color = TextSecondary, fontSize = 18.sp)
+        }
+    }
+}
+
+@Composable
 fun NotificationCard(
     notification: Notification,
-    onMarkAsRead: (String) -> Unit
+    onMarkAsRead: (String, String) -> Unit
 ) {
     val context = LocalContext.current
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         elevation = 4.dp,
         shape = RoundedCornerShape(16.dp),
-        backgroundColor = if (notification.read) BackgroundWhite else PrimaryBlueLight.copy(alpha = 0.1f)
+        backgroundColor = if (notification.read)
+            BackgroundWhite
+        else PrimaryBlueLight.copy(alpha = 0.1f)
     ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-        ) {
-            // Header con tipo de notificación y tiempo
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -220,182 +202,120 @@ fun NotificationCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // Contenido de la notificación
-            when (notification.type) {
-                "trip_started" -> {
-                    Text(
-                        text = "${notification.userName} ha iniciado un viaje",
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "🎯 Destino: ${notification.destination}",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "⏱️ Tiempo estimado: ${notification.estimatedTime}",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "🕐 Hora de inicio: ${notification.startTime}",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
+            // Contenido (igual que antes)
+            NotificationContent(notification, context)
 
-                    // Mostrar botón de Maps si está disponible
-                    if (notification.mapsLink.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(notification.mapsLink))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "No se pudo abrir Google Maps", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(36.dp),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = SuccessGreen),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "🗺️ Ver en Google Maps",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-                "trip_ended" -> {
-                    Text(
-                        text = "${notification.userName} ha finalizado su viaje",
-                        color = SuccessGreen,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "🕐 Hora de finalización: ${notification.endTime}",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                }
-                "location_update" -> {
-                    Text(
-                        text = "${notification.userName} actualizó su ubicación",
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "📍 Lat: ${"%.6f".format(notification.latitude)}, Lng: ${"%.6f".format(notification.longitude)}",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-
-                    // Botón para ver en Maps
-                    if (notification.mapsLink.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(notification.mapsLink))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "No se pudo abrir Google Maps", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(36.dp),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "🗺️ Ver ubicación en Maps",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Botón para marcar como leído si no lo está
             if (!notification.read) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(Modifier.height(12.dp))
                 Button(
-                    onClick = { onMarkAsRead(notification.id) },
+                    onClick = { onMarkAsRead(notification.ownerId, notification.id) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(36.dp),
                     colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text(
-                        text = "Marcar como leído",
-                        color = Color.White,
-                        fontSize = 12.sp
-                    )
+                    Text("Marcar como leído", color = Color.White, fontSize = 12.sp)
                 }
             }
         }
     }
 }
 
-private fun loadNotifications(
-    userPhone: String,
-    notifications: androidx.compose.runtime.MutableState<List<Notification>>,
-    isLoading: androidx.compose.runtime.MutableState<Boolean>
-) {
-    if (userPhone.isEmpty()) {
-        isLoading.value = false
-        return
+@Composable
+private fun NotificationContent(notification: Notification, context: android.content.Context) {
+    when (notification.type) {
+        "trip_started" -> {
+            Text("${notification.userName} ha iniciado un viaje",
+                color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+
+            Spacer(Modifier.height(4.dp))
+            Text("🎯 Destino: ${notification.destination}", color = TextSecondary, fontSize = 12.sp)
+            Text("⏱️ Tiempo estimado: ${notification.estimatedTime}", color = TextSecondary, fontSize = 12.sp)
+            Text("🕐 Inicio: ${notification.startTime}", color = TextSecondary, fontSize = 12.sp)
+        }
+
+        "trip_ended" -> {
+            Text("${notification.userName} ha finalizado su viaje",
+                color = SuccessGreen, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+
+            Spacer(Modifier.height(4.dp))
+            Text("🕐 Fin: ${notification.endTime}", color = TextSecondary, fontSize = 12.sp)
+        }
+
+        "location_update" -> {
+            Text("${notification.userName} actualizó su ubicación",
+                color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "📍 Lat: ${"%.6f".format(notification.latitude)}, Lng: ${"%.6f".format(notification.longitude)}",
+                color = TextSecondary, fontSize = 12.sp
+            )
+        }
     }
 
-    val database = FirebaseDatabase.getInstance()
-    val notificationsRef = database.getReference("notifications/$userPhone")
-
-    notificationsRef.addValueEventListener(object : ValueEventListener {
-        override fun onDataChange(snapshot: DataSnapshot) {
-            val notificationList = mutableListOf<Notification>()
-
-            for (child in snapshot.children) {
+    if (notification.mapsLink.isNotEmpty()) {
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = {
                 try {
-                    val notification = Notification(
-                        id = child.key ?: "",
-                        type = child.child("type").getValue(String::class.java) ?: "",
-                        userName = child.child("userName").getValue(String::class.java) ?: "Usuario",
-                        userUid = child.child("userUid").getValue(String::class.java) ?: "",
-                        destination = child.child("destination").getValue(String::class.java) ?: "",
-                        estimatedTime = child.child("estimatedTime").getValue(String::class.java) ?: "",
-                        startTime = child.child("startTime").getValue(String::class.java) ?: "",
-                        endTime = child.child("endTime").getValue(String::class.java) ?: "",
-                        timestamp = child.child("timestamp").getValue(Long::class.java) ?: 0,
-                        latitude = child.child("latitude").getValue(Double::class.java) ?: 0.0,
-                        longitude = child.child("longitude").getValue(Double::class.java) ?: 0.0,
-                        read = child.child("read").getValue(Boolean::class.java) ?: false,
-                        mapsLink = child.child("mapsLink").getValue(String::class.java) ?: "",
-                        hasLiveLocation = child.child("hasLiveLocation").getValue(Boolean::class.java) ?: false
-                    )
-                    notificationList.add(notification)
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(notification.mapsLink))
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
                 } catch (e: Exception) {
-                    // Ignorar notificaciones con formato incorrecto
+                    Toast.makeText(context, "No se pudo abrir Google Maps", Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(36.dp),
+            colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text("🗺️ Ver en Google Maps", color = Color.White, fontSize = 12.sp)
+        }
+    }
+}
+
+private fun loadNotifications(
+    notifications: MutableState<List<Notification>>,
+    isLoading: MutableState<Boolean>
+) {
+    val ref = FirebaseDatabase.getInstance().getReference("notifications")
+
+    ref.addValueEventListener(object : ValueEventListener {
+        override fun onDataChange(snapshot: DataSnapshot) {
+            val list = mutableListOf<Notification>()
+
+            for (userNode in snapshot.children) {          // userId
+                for (child in userNode.children) {         // notificationId
+                    try {
+                        val n = Notification(
+                            id = child.key ?: "",
+                            ownerId = userNode.key ?: "",  // ★ quién es el dueño real
+                            type = child.child("type").getValue(String::class.java) ?: "",
+                            userName = child.child("userName").getValue(String::class.java) ?: "",
+                            userUid = child.child("userUid").getValue(String::class.java) ?: "",
+                            destination = child.child("destination").getValue(String::class.java) ?: "",
+                            estimatedTime = child.child("estimatedTime").getValue(String::class.java) ?: "",
+                            startTime = child.child("startTime").getValue(String::class.java) ?: "",
+                            endTime = child.child("endTime").getValue(String::class.java) ?: "",
+                            timestamp = child.child("timestamp").getValue(Long::class.java) ?: 0,
+                            latitude = child.child("latitude").getValue(Double::class.java) ?: 0.0,
+                            longitude = child.child("longitude").getValue(Double::class.java) ?: 0.0,
+                            read = child.child("read").getValue(Boolean::class.java) ?: false,
+                            mapsLink = child.child("mapsLink").getValue(String::class.java) ?: "",
+                            hasLiveLocation = child.child("hasLiveLocation").getValue(Boolean::class.java) ?: false
+                        )
+                        list.add(n)
+                    } catch (e: Exception) { }
                 }
             }
 
-            notifications.value = notificationList
+            notifications.value = list
             isLoading.value = false
         }
 
@@ -405,19 +325,18 @@ private fun loadNotifications(
     })
 }
 
-private fun markNotificationAsRead(userPhone: String, notificationId: String) {
-    val database = FirebaseDatabase.getInstance()
-    val notificationRef = database.getReference("notifications/$userPhone/$notificationId/read")
-    notificationRef.setValue(true)
+private fun markNotificationAsRead(ownerId: String, notificationId: String) {
+    val ref = FirebaseDatabase.getInstance()
+        .getReference("notifications/$ownerId/$notificationId/read")
+
+    ref.setValue(true)
 }
 
 private fun clearAllNotifications(
-    userPhone: String,
-    notifications: androidx.compose.runtime.MutableState<List<Notification>>
+    notifications: MutableState<List<Notification>>
 ) {
-    val database = FirebaseDatabase.getInstance()
-    val notificationsRef = database.getReference("notifications/$userPhone")
-    notificationsRef.removeValue()
+    val ref = FirebaseDatabase.getInstance().getReference("notifications")
+    ref.removeValue()
     notifications.value = emptyList()
 }
 
@@ -431,24 +350,4 @@ private fun formatTimestamp(timestamp: Long): String {
 @Composable
 fun NotificationsScreenPreview() {
     NotificationsScreen(navigateBack = {})
-}
-
-@Preview
-@Composable
-fun NotificationCardPreview() {
-    val sampleNotification = Notification(
-        type = "trip_started",
-        userName = "María García",
-        destination = "Centro Comercial",
-        estimatedTime = "15 minutos",
-        startTime = "13:45",
-        timestamp = System.currentTimeMillis(),
-        read = false,
-        mapsLink = "https://maps.google.com/maps?q=-12.0464,-77.0428&z=15"
-    )
-
-    NotificationCard(
-        notification = sampleNotification,
-        onMarkAsRead = {}
-    )
 }

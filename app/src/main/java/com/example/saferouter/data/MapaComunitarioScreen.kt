@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -296,31 +297,52 @@ fun MapaComunitarioScreen(
 
 @Composable
 fun ReporteComunitarioCard(reporte: Reporte, context: Context) {
+
+    val isMine = reporte.usuarioId == FirebaseAuth.getInstance().currentUser?.uid
     var mostrarEvidencia by remember { mutableStateOf(false) }
+
+    // Color según dueño
+    val cardBorder = if (isMine) SuccessGreen else Color.Transparent
+    val cardBackground = if (isMine) BackgroundWhite.copy(alpha = 0.95f) else BackgroundWhite
 
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        elevation = 4.dp,
+        elevation = if (isMine) 8.dp else 4.dp,
         shape = RoundedCornerShape(16.dp),
-        backgroundColor = BackgroundWhite
+        backgroundColor = cardBackground,
+        border = if (isMine) BorderStroke(2.dp, SuccessGreen) else null
     ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-        ) {
-            // Header con tipo y distancia
+
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = reporte.tipo,
-                    color = PrimaryBlueDark,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = reporte.tipo,
+                        color = PrimaryBlueDark,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    // Etiqueta “Mi reporte”
+                    if (isMine) {
+                        Text(
+                            text = " (Mi reporte)",
+                            color = SuccessGreen,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
+                    }
+                }
+
                 Text(
                     text = "${reporte.distancia.toInt()}m",
                     color = TextSecondary,
@@ -340,9 +362,8 @@ fun ReporteComunitarioCard(reporte: Reporte, context: Context) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Botones de ubicación y evidencia
+            // Botones (igual que antes)
             Column {
-                // Botón para ver en Google Maps
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -356,7 +377,6 @@ fun ReporteComunitarioCard(reporte: Reporte, context: Context) {
                             try {
                                 context.startActivity(mapIntent)
                             } catch (e: Exception) {
-                                // Si Google Maps no está instalado, abrir en navegador
                                 val webIntent = Intent(
                                     Intent.ACTION_VIEW,
                                     Uri.parse("https://www.google.com/maps/search/?api=1&query=${reporte.ubicacion.latitud},${reporte.ubicacion.longitud}")
@@ -364,71 +384,39 @@ fun ReporteComunitarioCard(reporte: Reporte, context: Context) {
                                 context.startActivity(webIntent)
                             }
                         },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(32.dp)
-                            .padding(end = 8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = PrimaryBlueLight.copy(alpha = 0.2f)
-                        ),
-                        elevation = ButtonDefaults.elevation(
-                            defaultElevation = 0.dp,
-                            pressedElevation = 2.dp
-                        )
+                        modifier = Modifier.weight(1f).height(32.dp).padding(end = 8.dp),
+                        colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlueLight.copy(alpha = 0.2f)),
+                        elevation = ButtonDefaults.elevation(0.dp, 2.dp)
                     ) {
-                        Text(
-                            text = "🗺️ Ver ubicación",
-                            color = PrimaryBlue,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Text("🗺️ Ver ubicación", color = PrimaryBlue, fontSize = 12.sp)
                     }
 
-                    // Botón para ver evidencia si existe
+                    // Botón evidencia
                     if (reporte.evidenciaUrl.isNotEmpty()) {
                         Button(
                             onClick = { mostrarEvidencia = true },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(32.dp)
-                                .padding(start = 8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = SuccessGreen.copy(alpha = 0.2f)
-                            ),
-                            elevation = ButtonDefaults.elevation(
-                                defaultElevation = 0.dp,
-                                pressedElevation = 2.dp
-                            )
+                            modifier = Modifier.weight(1f).height(32.dp).padding(start = 8.dp),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = SuccessGreen.copy(alpha = 0.2f)),
+                            elevation = ButtonDefaults.elevation(0.dp, 2.dp)
                         ) {
-                            Text(
-                                text = "📸 Ver evidencia",
-                                color = SuccessGreen,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                            Text("📸 Ver evidencia", color = SuccessGreen, fontSize = 12.sp)
                         }
                     } else {
-                        // Espaciador para mantener la alineación cuando no hay evidencia
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Fila con tiempo y puntos
+                // Tiempo + puntos
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = calcularTiempoTranscurrido(reporte.fecha),
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
+                    Text(calcularTiempoTranscurrido(reporte.fecha), color = TextSecondary, fontSize = 12.sp)
 
-                    // Indicador de puntos si es tu reporte
-                    if (reporte.usuarioId == FirebaseAuth.getInstance().currentUser?.uid) {
+                    if (isMine) {
                         Text(
                             text = "+${reporte.puntos} puntos",
                             color = SuccessGreen,
@@ -441,8 +429,10 @@ fun ReporteComunitarioCard(reporte: Reporte, context: Context) {
         }
     }
 
-    // Diálogo para mostrar evidencia
+    // Diálogo evidencia (igual que antes)
     if (mostrarEvidencia && reporte.evidenciaUrl.isNotEmpty()) {
+
+
         Dialog(
             onDismissRequest = { mostrarEvidencia = false }
         ) {

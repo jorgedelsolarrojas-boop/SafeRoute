@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
+import androidx.compose.material.Icon
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,7 +34,9 @@ fun HomeScreen(
     navigateToReportarIncidente: () -> Unit,
     navigateToMapaComunitario: () -> Unit,
     navigateToMiDashboard: () -> Unit, // <-- 1. PARÁMETRO NUEVO AÑADIDO
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    navigateToNotificationSettings: () -> Unit
+
 ) {
     Column(
         modifier = Modifier
@@ -251,6 +254,30 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // --- 🔔 NUEVO BOTÓN: Configurar Notificaciones ---
+                Button(
+                    onClick = navigateToNotificationSettings,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 0.dp)  // 👈 ya tienes padding general, evita doble padding
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 12.dp
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_notifications),
+                        contentDescription = "Configuración Notificaciones"
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("⚙️ Configurar Notificaciones", color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 // Boton de salir
                 Button(onClick = { onLogout() }) {
                     Text("Cerrar sesión")
@@ -283,7 +310,8 @@ fun HomeScreenPreview() {
         navigateToNotifications = {},
         navigateToReportarIncidente = {},
         navigateToMapaComunitario = {},
-        navigateToMiDashboard = {}, // <-- 3. AÑADIDO AL PREVIEW
+        navigateToMiDashboard = {},
+        navigateToNotificationSettings = {}, // 👈 AGREGA ESTO
         onLogout = {}
     )
 }

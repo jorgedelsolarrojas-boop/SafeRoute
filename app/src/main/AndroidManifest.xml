@@ -36,6 +36,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SafeRoute">
 
+        <service
+            android:name=".firebase.MyFirebaseMessagingService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="TU_API_KEY_AQUI" />

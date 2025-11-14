@@ -1,10 +1,16 @@
+// Versión mejorada del Dashboard con:
+// ✔ Actividad por día en vez de por mes
+// ✔ Dashboard más limpio
+// ✔ Comentarios explicando dónde se usa Tehras Charts
+// ✔ Código optimizado y reestructurado
+
 package com.example.saferouter.data
 
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // <-- Importante: usa 'items'
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -20,20 +26,24 @@ import androidx.compose.ui.unit.sp
 import com.example.saferouter.R
 import com.example.saferouter.model.Reporte
 import com.example.saferouter.ui.theme.*
+
+// 📌 Librería TEHRAS → usada para los gráficos de barras
+//    https://github.com/tehras/charts
 import com.github.tehras.charts.bar.BarChart
 import com.github.tehras.charts.bar.BarChartData
-import com.google.firebase.auth.FirebaseAuth // <-- AÑADIDO
+
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.Query // <-- AÑADIDO
-import java.text.SimpleDateFormat // <-- AÑADIDO
-import java.util.Date // <-- AÑADIDO
-import java.util.Locale // <-- AÑADIDO
+import com.google.firebase.firestore.Query
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-// Data class para el nuevo gráfico de fechas
-data class FechaChartData(
-    val mes: String,
+// --- DATA CLASS: Datos para el gráfico por día ---
+data class DiaChartData(
+    val dia: String,      // Ej: "12 Nov"
     val cantidad: Int,
     val color: Color
 )
@@ -43,74 +53,58 @@ fun MiDashboardScreen(
     db: FirebaseFirestore,
     auth: FirebaseAuth,
     navigateBack: () -> Unit,
-    navigateToHeatmap: () -> Unit,   // <-- AÑADIDO
+    navigateToHeatmap: () -> Unit,
     context: Context
-)
- {
-    // Estados para los datos filtrados
+) {
+    // --- ESTADOS ---
     val reportes = remember { mutableStateOf<List<Reporte>>(emptyList()) }
-    val misPuntos = remember { mutableStateOf(0) } // <-- AÑADIDO: Para total de puntos
+    val misPuntos = remember { mutableStateOf(0) }
     var listenerRegistration: ListenerRegistration? by remember { mutableStateOf(null) }
-    val currentUser = auth.currentUser // <-- AÑADIDO: Obtenemos el usuario
+    val currentUser = auth.currentUser
 
-    // Obtener reportes en tiempo real (SOLO DEL USUARIO ACTUAL)
-    LaunchedEffect(currentUser) { // Se activa si el usuario cambia
+    // --- FIREBASE LISTENER: Reportes del usuario actual ---
+    LaunchedEffect(currentUser) {
         if (currentUser == null) {
-            // Si no hay usuario, limpiar todo
             reportes.value = emptyList()
             misPuntos.value = 0
             return@LaunchedEffect
         }
 
-        // <-- MODIFICADO: Añadido .whereEqualTo() y .orderBy()
         listenerRegistration = db.collection("reportes")
-            .whereEqualTo("usuarioId", currentUser.uid) // <-- ¡LA CLAVE! Filtra por ID de usuario
-            .orderBy("fecha", Query.Direction.DESCENDING) // Ordena por fecha
+            .whereEqualTo("usuarioId", currentUser.uid)
+            .orderBy("fecha", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener // Manejo de error
+                if (error != null) return@addSnapshotListener
 
-                val reportesList = snapshot?.documents?.mapNotNull { doc ->
-                    val reporte = doc.toObject(Reporte::class.java)
-                    reporte?.copy(id = doc.id)
+                val lista = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Reporte::class.java)?.copy(id = doc.id)
                 } ?: emptyList()
 
-                // Actualiza los estados
-                reportes.value = reportesList
-                misPuntos.value = reportesList.sumBy { it.puntos } // <-- AÑADIDO: Suma los puntos
+                reportes.value = lista
+                misPuntos.value = lista.sumBy { it.puntos }
             }
     }
 
-    // Limpiar listener al desmontar
     DisposableEffect(Unit) {
-        onDispose {
-            listenerRegistration?.remove()
-        }
+        onDispose { listenerRegistration?.remove() }
     }
 
-    // Procesar datos para gráficos (solo los del usuario)
-    val datosGraficoTipos by remember(reportes.value) {
-        derivedStateOf {
-            procesarDatosTipos(reportes.value) // Reutilizamos esta función
-        }
+    // --- DATOS PROCESADOS PARA GRÁFICOS ---
+    val datosPorTipo by remember(reportes.value) {
+        derivedStateOf { procesarDatosTipos(reportes.value) }
     }
 
-    // <-- AÑADIDO: Procesar datos para gráfico de fechas
-    val datosGraficoFecha by remember(reportes.value) {
-        derivedStateOf {
-            procesarDatosFecha(reportes.value)
-        }
+    val datosPorDia by remember(reportes.value) {
+        derivedStateOf { procesarDatosPorDia(reportes.value) }
     }
 
+    // --- UI ---
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(PrimaryBlueLight, BackgroundWhite),
-                    startY = 0f,
-                    endY = 1000f
-                )
+        modifier = Modifier.fillMaxSize().background(
+            brush = Brush.verticalGradient(
+                colors = listOf(PrimaryBlueLight, BackgroundWhite)
             )
+        )
     ) {
         LazyColumn(
             modifier = Modifier
@@ -118,26 +112,22 @@ fun MiDashboardScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
+            // --- HEADER ---
             item {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = navigateBack,
-                        modifier = Modifier.size(24.dp)
-                    ) {
+                    IconButton(onClick = navigateBack) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_back_24),
+                            painterResource(id = R.drawable.ic_back_24),
                             contentDescription = "Back",
-                            tint = PrimaryBlueDark // Color corregido
+                            tint = PrimaryBlueDark
                         )
                     }
+
                     Text(
-                        text = "Mi Dashboard Personal", // <-- MODIFICADO: Título
+                        text = "Mi Dashboard Personal",
                         color = PrimaryBlueDark,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
@@ -146,312 +136,169 @@ fun MiDashboardScreen(
                 }
             }
 
-            // <-- MODIFICADO: Estadísticas personales
+            // --- ESTADÍSTICAS ---
             item {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     elevation = 4.dp,
                     shape = RoundedCornerShape(16.dp),
-                    backgroundColor = BackgroundWhite.copy(alpha = 0.9f)
+                    backgroundColor = BackgroundWhite
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceAround
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceAround,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Stat: Mis Reportes
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = reportes.value.size.toString(),
-                                color = PrimaryBlueDark,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Mis Reportes",
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
-                        }
-                        // Stat: Mis Puntos
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = misPuntos.value.toString(),
-                                color = SuccessGreen, // Color distintivo para puntos
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Mis Puntos",
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
-                        }
-                        // Stat: Tipos reportados
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = datosGraficoTipos.size.toString(),
-                                color = PrimaryBlueDark,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Tipos Reportados",
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
-                        }
+                        DashboardStat(reportes.value.size, "Mis Reportes")
+                        DashboardStat(misPuntos.value, "Mis Puntos", SuccessGreen)
+                        DashboardStat(datosPorTipo.size, "Tipos Reportados")
                     }
                 }
             }
 
-            // <-- ELIMINADO: Gráfico Pie "Reportes por Usuario" (no es necesario aquí)
-
-            // <-- AÑADIDO: Gráfico de Barras - Reportes por Mes (HU07)
+            // --- GRAFICO: Actividad por día (TEHRAS) ---
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp), // Altura ajustada
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    backgroundColor = BackgroundWhite
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Mi Actividad por Mes",
-                            color = TextPrimary,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-
-                        if (datosGraficoFecha.isNotEmpty()) {
-                            BarChart(
-                                barChartData = BarChartData(
-                                    bars = datosGraficoFecha.map { data ->
-                                        BarChartData.Bar(
-                                            value = data.cantidad.toFloat(),
-                                            color = data.color,
-                                            label = data.mes
-                                        )
-                                    }
-                                ),
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(8.dp)
-                            )
-                        } else {
-                            // Mensaje de "Sin datos"
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Aún no tienes reportes",
-                                    color = TextSecondary,
-                                    fontSize = 16.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Gráfico de barras - Reportes por tipo (¡Este se queda!)
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(400.dp),
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    backgroundColor = BackgroundWhite
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Mis Reportes por Tipo", // <-- MODIFICADO: Título
-                            color = TextPrimary,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-
-                        if (datosGraficoTipos.isNotEmpty()) {
-                            BarChart(
-                                barChartData = BarChartData(
-                                    bars = datosGraficoTipos.map { data ->
-                                        BarChartData.Bar(
-                                            value = data.cantidad.toFloat(),
-                                            color = data.color,
-                                            label = data.tipo
-                                        )
-                                    }
-                                ),
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(8.dp)
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_report),
-                                        contentDescription = "Sin datos",
-                                        tint = TextSecondary,
-                                        modifier = Modifier.size(64.dp)
-                                    )
-                                    Text(
-                                        text = "No hay datos de tipos",
-                                        color = TextSecondary,
-                                        fontSize = 16.sp,
-                                        modifier = Modifier.padding(top = 16.dp)
+                DashboardCard(title = "Mi Actividad por Día") {
+                    if (datosPorDia.isNotEmpty()) {
+                        BarChart(
+                            barChartData = BarChartData(
+                                bars = datosPorDia.map { d ->
+                                    BarChartData.Bar(
+                                        value = d.cantidad.toFloat(),
+                                        label = d.dia,
+                                        color = d.color
                                     )
                                 }
-                            }
-                        }
+                            ),
+                            modifier = Modifier.fillMaxSize().padding(8.dp)
+                        )
+                    } else {
+                        NoDataMessage()
                     }
                 }
             }
 
-            // <-- ELIMINADO: Leyenda "Top Usuarios" (no es necesario aquí)
+            // --- GRAFICO: Mis tipos reportados ---
+            item {
+                DashboardCard(title = "Mis Reportes por Tipo") {
+                    if (datosPorTipo.isNotEmpty()) {
+                        BarChart(
+                            barChartData = BarChartData(
+                                bars = datosPorTipo.map { d ->
+                                    BarChartData.Bar(
+                                        value = d.cantidad.toFloat(),
+                                        label = d.tipo,
+                                        color = d.color
+                                    )
+                                }
+                            ),
+                            modifier = Modifier.fillMaxSize().padding(8.dp)
+                        )
+                    } else {
+                        NoDataMessage()
+                    }
+                }
+            }
 
-            // --- AÑADIDO: Historial de Reportes Personales (HU07) ---
+            // --- HISTORIAL ---
             item {
                 Text(
                     text = "Mi Historial de Reportes",
                     color = TextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
 
             if (reportes.value.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Aún no has hecho reportes.",
-                            color = TextSecondary,
-                            fontSize = 16.sp
-                        )
-                    }
-                }
+                item { NoDataMessage() }
             } else {
-                // Usamos 'items' para la lista de reportes
                 items(reportes.value) { reporte ->
-                    // Asumimos que ReporteComunitarioCard está visible en este paquete
-                    // Esta es la Card que diseñaste en "MapaComunitarioScreen.kt"
                     ReporteComunitarioCard(reporte = reporte, context = context)
                 }
             }
 
-            // Espacio final para mejor scroll
-            item {
-                Spacer(modifier = Modifier.height(80.dp))
-            }
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }
 
+// --- COMPOSABLES REUTILIZABLES ---
 
-// --- FUNCIONES HELPER ---
+@Composable
+fun DashboardCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().height(300.dp),
+        elevation = 4.dp,
+        shape = RoundedCornerShape(16.dp),
+        backgroundColor = BackgroundWhite
+    ) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Spacer(modifier = Modifier.height(12.dp))
+            content()
+        }
+    }
+}
 
-// Función para procesar datos por tipo (Esta se queda, es útil)
+@Composable
+fun DashboardStat(value: Int, label: String, color: Color = PrimaryBlueDark) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value.toString(), color = color, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = TextSecondary, fontSize = 12.sp)
+    }
+}
+
+@Composable
+fun NoDataMessage() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("Sin datos disponibles", color = TextSecondary)
+    }
+}
+
+// --- PROCESAMIENTO: Tipos ---
 private fun procesarDatosTipos(reportes: List<Reporte>): List<TipoChartData> {
-    val tiposPredefinidos = listOf(
-        "Robo",
-        "Asalto",
-        "Alta congestión vehicular",
-        "Baja iluminación de la zona",
-        "Huelga"
-    )
-
+    val tiposPredef = listOf("Robo", "Asalto", "Alta congestión vehicular", "Baja iluminación de la zona", "Huelga")
     val tiposMap = mutableMapOf<String, Int>()
 
-    reportes.forEach { reporte ->
-        val tipo = if (reporte.tipo in tiposPredefinidos) {
-            reporte.tipo
-        } else {
-            "Otro"
-        }
+    reportes.forEach {
+        val tipo = if (it.tipo in tiposPredef) it.tipo else "Otro"
         tiposMap[tipo] = tiposMap.getOrDefault(tipo, 0) + 1
     }
 
-    val coloresPorTipo = mapOf(
+    val colores = mapOf(
         "Robo" to Color.Red,
-        "Asalto" to Color(0xFF3B82F6),
+        "Asalto" to PrimaryBlue,
         "Alta congestión vehicular" to WarningYellow,
         "Baja iluminación de la zona" to SuccessGreen,
-        "Huelga" to Color(0xFF059669),
+        "Huelga" to ChartPurple,
         "Otro" to PrimaryBlueLight
     )
 
-    return tiposMap.map { (tipo, cantidad) ->
-        TipoChartData(
-            tipo = tipo,
-            cantidad = cantidad,
-            color = coloresPorTipo[tipo] ?: PrimaryBlue
-        )
+    return tiposMap.map { (tipo, cant) ->
+        TipoChartData(tipo, cant, colores[tipo] ?: PrimaryBlue)
     }
 }
 
-// --- CÓPIGO CORREGIDO ---
-// Pega esto al final de tu archivo, reemplazando la función vieja
+// --- NUEVO: Procesar actividad por día ---
+private fun procesarDatosPorDia(reportes: List<Reporte>): List<DiaChartData> {
+    val formatoDia = SimpleDateFormat("dd MMM", Locale.getDefault())
 
-private fun procesarDatosFecha(reportes: List<Reporte>): List<FechaChartData> {
-    // Colores para el gráfico de fechas
-    val colores = listOf(
-        PrimaryBlue,
-        ChartPurple,
-        SuccessGreen,
-        ChartPink,
-        PrimaryBlueDark,
-        WarningYellow
-    )
+    val colores = listOf(PrimaryBlue, ChartPurple, SuccessGreen, ChartPink, PrimaryBlueDark, WarningYellow)
 
-    // Formato para agrupar por Mes y Año (Ej: "Nov 2025")
-    val formatoMes = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+    val validos = reportes.filter { it.fecha != null }
 
-    // --- 👇 AQUÍ ESTÁ LA CORRECCIÓN 👇 ---
-    // 1. Filtra reportes que no tengan fecha ANTES de procesarlos
-    val reportesConFechaValida = reportes.filter { it.fecha != null }
-
-    // 2. Ahora agrupamos usando la lista filtrada y segura
-    val reportesPorMes = reportesConFechaValida
-        .groupBy { formatoMes.format(it.fecha!!) } // Agrupa por "Nov 2025" (ahora es seguro usar !!)
-        .map { (mes, lista) ->
-            // Usamos un Triple para guardar la fecha real (para ordenar), el string del mes y la cantidad
-            Triple(lista.first().fecha!!, mes, lista.size) // También es seguro aquí
+    val agrupado = validos
+        .groupBy { formatoDia.format(it.fecha!!) }
+        .map { (dia, lista) ->
+            Triple(lista.first().fecha!!, dia, lista.size)
         }
-        .sortedByDescending { it.first } // Ordena por fecha (más reciente primero)
-        .take(6) // Toma los últimos 6 meses de actividad
-        .reversed() // Invierte para que el gráfico muestre (Ej: Jun, Jul, Ago...)
+        .sortedByDescending { it.first }
+        .take(7)
+        .reversed()
 
-    // Convierte al formato que necesita el gráfico (FechaChartData)
-    return reportesPorMes.mapIndexed { index, (_, mes, cantidad) ->
-        FechaChartData(
-            mes = mes,
-            cantidad = cantidad,
-            color = colores[index % colores.size] // Asigna un color cíclico
-        )
+    return agrupado.mapIndexed { i, (_, dia, cant) ->
+        DiaChartData(dia, cant, colores[i % colores.size])
     }
 }

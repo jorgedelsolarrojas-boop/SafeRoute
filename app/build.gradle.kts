@@ -65,13 +65,16 @@ dependencies {
     implementation(libs.androidx.material)
     implementation(libs.androidx.navigation.compose)
 
-    // Firebase (BOM gestiona las versiones)
+    // Firebase (BOM controla versiones)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.storage)
+
+    // 🔥 CORRECCIÓN IMPORTANTE ↓
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
@@ -92,26 +95,21 @@ dependencies {
     // Charts
     implementation(libs.tehras.charts)
 
-    // NUEVAS DEPENDENCIAS PARA HU06 (Unidad 6 - Persistencia)
+    // Datastore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // WorkManager para tareas en segundo plano (Unidad 6)
+    // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // Lifecycle ViewModel Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation(libs.androidx.compose.runtime)
-    implementation("com.google.maps.android:maps-utils-ktx:3.4.0")
 
+    // Maps Utils KTX
+    implementation("com.google.maps.android:maps-utils-ktx:3.4.0")
 
     // Google Maps Compose
     implementation("com.google.maps.android:maps-compose:4.3.3")
-// Google Play Services Maps
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-// Google Maps Utils (Heatmap, Clusters, etc)
-    implementation("com.google.maps.android:android-maps-utils:3.4.0")
-// Play services location (si necesitas ubicación del usuario)
-    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation(libs.androidx.compose.foundation)
 
     // Testing
     testImplementation(libs.junit)
