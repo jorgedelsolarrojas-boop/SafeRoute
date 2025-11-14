@@ -41,10 +41,12 @@ data class FechaChartData(
 @Composable
 fun MiDashboardScreen(
     db: FirebaseFirestore,
-    auth: FirebaseAuth, // <-- AÑADIDO: Para saber quién es el usuario
+    auth: FirebaseAuth,
     navigateBack: () -> Unit,
+    navigateToHeatmap: () -> Unit,   // <-- AÑADIDO
     context: Context
-) {
+)
+ {
     // Estados para los datos filtrados
     val reportes = remember { mutableStateOf<List<Reporte>>(emptyList()) }
     val misPuntos = remember { mutableStateOf(0) } // <-- AÑADIDO: Para total de puntos

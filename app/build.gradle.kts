@@ -100,6 +100,18 @@ dependencies {
 
     // Lifecycle ViewModel Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation(libs.androidx.compose.runtime)
+    implementation("com.google.maps.android:maps-utils-ktx:3.4.0")
+
+
+    // Google Maps Compose
+    implementation("com.google.maps.android:maps-compose:4.3.3")
+// Google Play Services Maps
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+// Google Maps Utils (Heatmap, Clusters, etc)
+    implementation("com.google.maps.android:android-maps-utils:3.4.0")
+// Play services location (si necesitas ubicación del usuario)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 
     // Testing
     testImplementation(libs.junit)

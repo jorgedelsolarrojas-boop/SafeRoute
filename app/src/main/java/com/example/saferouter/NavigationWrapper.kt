@@ -1,6 +1,8 @@
 package com.example.saferouter
 
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
@@ -25,6 +27,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.saferouter.presentation.settings.NotificationSettingsScreen
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavigationWrapper(
     navHostController: NavHostController,
@@ -140,10 +143,11 @@ fun NavigationWrapper(
 
         composable("mi_dashboard") {
             MiDashboardScreen(
-                db = FirebaseFirestore.getInstance(),
-                auth = FirebaseAuth.getInstance(),
+                db = db,
+                auth = auth,
                 navigateBack = { navHostController.popBackStack() },
-                context = LocalContext.current
+                navigateToHeatmap = { navHostController.navigate("heatmap") },
+                context = context
             )
         }
 
