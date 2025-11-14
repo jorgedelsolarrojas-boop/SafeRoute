@@ -51,7 +51,7 @@ fun NavigationWrapper(
     // Mientras Firebase aún carga el estado del usuario (unos ms), no dibujamos nada
     if (startDestination == null) return
 
-    NavHost(navController = navHostController, startDestination = "initial") {
+    NavHost(navController = navHostController, startDestination = startDestination!!) {
         composable(route = "notificationSettings") {
             NotificationSettingsScreen(
                 navigateBack = { navHostController.popBackStack() }
