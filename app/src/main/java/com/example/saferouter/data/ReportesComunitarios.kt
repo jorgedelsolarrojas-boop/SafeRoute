@@ -38,7 +38,7 @@ fun ReportesComunitarios(
 
     // Obtener reportes en tiempo real
     LaunchedEffect(Unit) {
-        listenerRegistration = db.collection("reportes")
+        listenerRegistration = db.collection("reportes")    // coleccion creada en firestore
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
 
@@ -196,7 +196,7 @@ fun ReportesComunitarios(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
-
+                        //armado de piechart
                         if (datosGraficoUsuarios.isNotEmpty()) {
                             PieChart(
                                 pieChartData = PieChartData(
@@ -259,6 +259,7 @@ fun ReportesComunitarios(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
+                        // aramado del grafico de barras
 
                         if (datosGraficoTipos.isNotEmpty()) {
                             BarChart(

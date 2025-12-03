@@ -55,9 +55,9 @@ fun ReportarIncidenteScreen(
     navigateBack: () -> Unit,
     context: Context
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
+    val context = LocalContext.current   // get actual context para acceder a recursos del sistema, start actividades, get servicios
+    val scope = rememberCoroutineScope()   // Permite lanzar corutinas (tareas asincrónicas)
+    val scrollState = rememberScrollState()  // crea un objeto ScrollState q mantiene Estado para el desplazamiento vertical
 
     // Estados del formulario
     val tipoIncidente = remember { mutableStateOf("") }
@@ -141,7 +141,8 @@ fun ReportarIncidenteScreen(
     }
 
     // Obtener información del usuario actual y ubicación al cargar la pantalla
-    LaunchedEffect(Unit) {
+
+    LaunchedEffect(Unit) {     //Corutina permite manejar operaciones asincronas
         val user = FirebaseAuth.getInstance().currentUser
         user?.let { currentUser ->
             // Buscar el usuario en la colección "users" de Firestore
@@ -520,8 +521,10 @@ fun ReportarIncidenteScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
+                            //// En la sección de evidencia - para mostrar imagen seleccionada
+                            // usamos COIL
                             Image(
-                                painter = rememberAsyncImagePainter(uri),
+                                painter = rememberAsyncImagePainter(uri), // ✅ COIL para cargar la imagen y mostrarla en un composable
                                 contentDescription = "Evidencia",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
@@ -581,13 +584,13 @@ fun ReportarIncidenteScreen(
 
                         isLoading.value = true
 
-                        scope.launch {
+                        scope.launch {      // Corutina para operaciones de red
                             try {
                                 // Subir evidencia a Cloudinary si existe
                                 var evidenciaUrl = ""
                                 evidenciaUri.value?.let { uri ->
                                     Log.d("ReportarIncidente", "Subiendo evidencia a Cloudinary...")
-                                    evidenciaUrl = subirImagenACloudinary(
+                                    evidenciaUrl = subirImagenACloudinary(    // ✅ Función suspend
                                         uri = uri,
                                         cloudName = cloudName,
                                         uploadPreset = uploadPreset,
@@ -596,7 +599,7 @@ fun ReportarIncidenteScreen(
                                     Log.d("ReportarIncidente", "Evidencia subida: $evidenciaUrl")
 
                                     if (evidenciaUrl.isEmpty()) {
-                                        withContext(Dispatchers.Main) {
+                                        withContext(Dispatchers.Main) {    // CORUTINA para actualizar UI, // ✅ Vuelve al hilo principal
                                             Toast.makeText(context, "❌ Error al subir la evidencia", Toast.LENGTH_SHORT).show()
                                             isLoading.value = false
                                         }
@@ -626,7 +629,7 @@ fun ReportarIncidenteScreen(
                                 Log.d("ReportarIncidente", "Guardando reporte con usuario: ${nombreUsuario.value}")
 
                                 // Guardar en Firestore
-                                db.collection("reportes")
+                                db.collection("reportes")    // se crea la coleccion reportes en firestore
                                     .add(reporte)
                                     .addOnSuccessListener {
                                         isLoading.value = false
@@ -730,13 +733,16 @@ private fun createImageFile(context: Context): File {
 }
 
 // 🌥️ Función para subir imagen a Cloudinary
+// Subida manual a Cloudinary - NO Retrofit
 private suspend fun subirImagenACloudinary(
     uri: Uri,
     cloudName: String,
     uploadPreset: String,
     context: Context
-): String? = withContext(Dispatchers.IO) {
+): String? = withContext(Dispatchers.IO) {    // corutina para operaciones bloqueantes
+    // ✅ Cambia al dispatcher de IO para operaciones de red/archivos
     try {
+        // Operaciones que bloquean el hilo:
         val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
         val bytes = inputStream?.readBytes() ?: return@withContext null
         inputStream.close()
@@ -746,7 +752,11 @@ private suspend fun subirImagenACloudinary(
         val twoHyphens = "--"
 
         val url = URL("https://api.cloudinary.com/v1_1/$cloudName/image/upload")
-        val connection = url.openConnection() as HttpURLConnection
+        val connection = url.openConnection() as HttpURLConnection    //SE usa HttpURLConnection manual, en lugar de retrofit
+
+        // ... operaciones de red,
+        //conexion manual
+
         connection.doOutput = true
         connection.useCaches = false
         connection.requestMethod = "POST"

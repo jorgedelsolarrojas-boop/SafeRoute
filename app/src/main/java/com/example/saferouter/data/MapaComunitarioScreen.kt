@@ -74,6 +74,8 @@ fun MapaComunitarioScreen(
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
 
+                // CONVERTIR DOCUMENTOS A OBJETOS REPORTE
+
                 val reportesList = snapshot?.documents?.mapNotNull { doc ->
                     val reporte = doc.toObject(Reporte::class.java)
                     reporte?.copy(id = doc.id)
@@ -429,7 +431,7 @@ fun ReporteComunitarioCard(reporte: Reporte, context: Context) {
         }
     }
 
-    // Diálogo evidencia (igual que antes)
+    // Diálogo evidencia
     if (mostrarEvidencia && reporte.evidenciaUrl.isNotEmpty()) {
 
 
@@ -473,7 +475,7 @@ fun ReporteComunitarioCard(reporte: Reporte, context: Context) {
 
                     // Imagen de la evidencia
                     Image(
-                        painter = rememberAsyncImagePainter(reporte.evidenciaUrl),
+                        painter = rememberAsyncImagePainter(reporte.evidenciaUrl), // ✅ COIL AQUÍ
                         contentDescription = "Evidencia del reporte",
                         modifier = Modifier
                             .fillMaxWidth()

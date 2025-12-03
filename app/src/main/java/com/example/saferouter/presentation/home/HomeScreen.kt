@@ -14,6 +14,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Icon
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,11 +35,13 @@ fun HomeScreen(
     navigateToNotifications: () -> Unit,
     navigateToReportarIncidente: () -> Unit,
     navigateToMapaComunitario: () -> Unit,
-    navigateToMiDashboard: () -> Unit, // <-- 1. PARÁMETRO NUEVO AÑADIDO
+    navigateToMiDashboard: () -> Unit,
+    navigateToBot: () -> Unit,
     onLogout: () -> Unit,
     navigateToNotificationSettings: () -> Unit
-
 ) {
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -48,10 +52,13 @@ fun HomeScreen(
                     endY = 800f
                 )
             )
+            .verticalScroll(scrollState) // 🔥 AGREGADO: hacer scroll
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top // 🔥 CAMBIADO: de Center a Top
     ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Logo de la app
         Image(
             painter = painterResource(id = R.drawable.logo),
@@ -207,13 +214,13 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // --- 👇 2. BOTÓN NUEVO AÑADIDO 👇 ---
+                // Botón Mi Dashboard
                 Button(
-                    onClick = navigateToMiDashboard, // <-- Usa el nuevo parámetro
+                    onClick = navigateToMiDashboard,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = SuccessGreen), // Color diferente
+                    colors = ButtonDefaults.buttonColors(backgroundColor = SuccessGreen),
                     shape = RoundedCornerShape(14.dp),
                     elevation = ButtonDefaults.elevation(
                         defaultElevation = 6.dp,
@@ -227,7 +234,6 @@ fun HomeScreen(
                         fontSize = 16.sp
                     )
                 }
-                // --- FIN DEL BOTÓN NUEVO ---
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -254,12 +260,11 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // --- 🔔 NUEVO BOTÓN: Configurar Notificaciones ---
+                // Botón Configurar Notificaciones
                 Button(
                     onClick = navigateToNotificationSettings,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 0.dp)  // 👈 ya tienes padding general, evita doble padding
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
                     shape = RoundedCornerShape(14.dp),
@@ -270,17 +275,62 @@ fun HomeScreen(
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_notifications),
-                        contentDescription = "Configuración Notificaciones"
+                        contentDescription = "Configuración Notificaciones",
+                        tint = Color.White
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("⚙️ Configurar Notificaciones", color = Color.White)
+                    Text(
+                        text = "⚙️ Configurar Notificaciones",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Boton de salir
-                Button(onClick = { onLogout() }) {
-                    Text("Cerrar sesión")
+                // Botón SRBot
+                Button(
+                    onClick = navigateToBot,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 12.dp
+                    )
+                ) {
+                    Text(
+                        text = "🤖 SRBot - Asistente IA",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Botón de salir
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red.copy(alpha = 0.7f)),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 12.dp
+                    )
+                ) {
+                    Text(
+                        text = "Cerrar sesión",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
             }
         }
@@ -296,6 +346,8 @@ fun HomeScreen(
             modifier = Modifier.padding(horizontal = 20.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -311,7 +363,8 @@ fun HomeScreenPreview() {
         navigateToReportarIncidente = {},
         navigateToMapaComunitario = {},
         navigateToMiDashboard = {},
-        navigateToNotificationSettings = {}, // 👈 AGREGA ESTO
+        navigateToBot = {},
+        navigateToNotificationSettings = {},
         onLogout = {}
     )
 }

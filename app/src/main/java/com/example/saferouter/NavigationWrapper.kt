@@ -26,6 +26,11 @@ import com.example.saferouter.presentation.signup.SignUpScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.saferouter.presentation.settings.NotificationSettingsScreen
+import com.example.saferouter.presentation.bot.BotScreen
+import com.google.android.gms.location.LocationServices
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -37,22 +42,40 @@ fun NavigationWrapper(
     val context = LocalContext.current
     var startDestination by remember { mutableStateOf<String?>(null) }
 
+    // Estado para la ubicación actual
+    var currentLat by remember { mutableStateOf<Double?>(null) }
+    var currentLng by remember { mutableStateOf<Double?>(null) }
+
+    // Obtener ubicación actual
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                location?.let {
+                    currentLat = it.latitude
+                    currentLng = it.longitude
+                }
+            }
+        }
+    }
+
     DisposableEffect(Unit) {
         val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             val user = firebaseAuth.currentUser
             startDestination = if (user != null) "home" else "initial"
         }
 
-        //  Agregamos el listener
         auth.addAuthStateListener(authStateListener)
 
-        //  Limpiamos al salir del composable
         onDispose {
             auth.removeAuthStateListener(authStateListener)
         }
     }
 
-    // Mientras Firebase aún carga el estado del usuario (unos ms), no dibujamos nada
     if (startDestination == null) return
 
     NavHost(navController = navHostController, startDestination = startDestination!!) {
@@ -61,6 +84,7 @@ fun NavigationWrapper(
                 navigateBack = { navHostController.popBackStack() }
             )
         }
+
         composable("initial") {
             InitialScreen(
                 navigateToLogin = { navHostController.navigate("logIn") },
@@ -79,10 +103,7 @@ fun NavigationWrapper(
                 navigateToReset = {
                     navHostController.navigate("resetPassword")
                 },
-
-                // --- AÑADE ESTA LÍNEA ---
                 navigateBack = { navHostController.popBackStack() }
-
             )
         }
 
@@ -97,20 +118,20 @@ fun NavigationWrapper(
                 navigateToContacts = { navHostController.navigate("contacts") },
                 navigateToTripTracking = { navHostController.navigate("trip_tracking") },
                 navigateToNotifications = { navHostController.navigate("notifications") },
+                navigateToBot = { navHostController.navigate("bot") },
                 navigateToReportarIncidente = { navHostController.navigate("reportar_incidente") },
                 navigateToMapaComunitario = { navHostController.navigate("mapaComunitario") },
                 navigateToMiDashboard = { navHostController.navigate("mi_dashboard") },
-                navigateToNotificationSettings = { navHostController.navigate("notificationSettings") }, // <-- AÑADIDA
+                navigateToNotificationSettings = { navHostController.navigate("notificationSettings") },
                 onLogout = {
                     AuthManager.logout()
-                    Toast.makeText(context, " Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
                     navHostController.navigate("logIn") {
                         popUpTo("home") { inclusive = true }
                     }
                 }
             )
         }
-
 
         composable("profile") {
             PerfilScreen(
@@ -152,7 +173,6 @@ fun NavigationWrapper(
             )
         }
 
-
         composable("reportar_incidente") {
             ReportarIncidenteScreen(
                 db = FirebaseFirestore.getInstance(),
@@ -160,7 +180,6 @@ fun NavigationWrapper(
                 context = context
             )
         }
-
 
         composable("mapaComunitario") {
             MapaComunitarioScreen(
@@ -179,7 +198,6 @@ fun NavigationWrapper(
             )
         }
 
-
         composable("resetPassword") {
             ResetPasswordScreen(
                 auth = auth,
@@ -192,6 +210,14 @@ fun NavigationWrapper(
                 navigateBack = { navHostController.popBackStack() }
             )
         }
-    }
 
+        // 🔥 CORRECCIÓN: Pasar los parámetros de ubicación
+        composable("bot") {
+            BotScreen(
+                navigateBack = { navHostController.popBackStack() },
+                currentLat = currentLat,
+                currentLng = currentLng
+            )
+        }
+    }
 }
