@@ -1,8 +1,12 @@
 package com.example.saferouter.model
 
+import androidx.room.Entity // 👈 NUEVO
+import androidx.room.PrimaryKey // 👈 NUEVO
 import java.util.*
 
+@Entity(tableName = "reportes") // 👈 LO CONVERTIMOS EN UNA ENTIDAD ROOM
 data class Reporte(
+    @PrimaryKey // 👈 AÑADIMOS LA CLAVE PRIMARIA
     val id: String = "",
     val tipo: String = "",
     val descripcion: String = "",
@@ -12,9 +16,10 @@ data class Reporte(
     val usuarioNombre: String = "",
     val fecha: Date = Date(),
     val puntos: Int = 10,
-    val verificado: Boolean = false,
+    val verificado: Boolean = false, // Usaremos este como flag de sincronización
     val distancia: Double = 0.0
 ) {
+    // Es mejor evitar el constructor secundario para Room y usar valores por defecto.
     constructor() : this("", "", "", UbicacionReporte(), "", "", "", Date(), 10, false, 0.0)
 }
 

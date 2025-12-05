@@ -5,18 +5,24 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import android.content.Context
 import androidx.room.TypeConverters
-import com.example.saferouter.data.local.converters.Converters  // 🔥 CORRECCIÓN: import correcto
-import com.example.saferouter.data.local.dao.AlertDao
-import com.example.saferouter.data.local.entity.AlertEntity
+import com.example.saferouter.data.local.converters.Converters
+import com.example.saferouter.data.local.dao.AlertDao // Ya existía
+import com.example.saferouter.model.Reporte // 👈 TU MODELO EXISTENTE (debe ser una entidad)
+import com.example.saferouter.data.dao.ReporteDao // 👈 EL DAO QUE CREAMOS PARA LOS REPORTES
+import com.example.saferouter.data.local.entity.AlertEntity // Ya existía
 
+// 🚨 IMPORTANTE: Necesitas incrementar la versión si ya tenías una app instalada con la DB.
+// Asumo que tu modelo 'Reporte' tiene la anotación @Entity
 @Database(
-    entities = [AlertEntity::class],
-    version = 1,
+    entities = [AlertEntity::class, Reporte::class], // 👈 AÑADIR TU MODELO REPORTE
+    version = 2, // 👈 INCREMENTAMOS LA VERSIÓN para incluir Reporte (Si no, fallará)
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun alertDao(): AlertDao
+
+    abstract fun alertDao(): AlertDao // DAO existente
+    abstract fun reporteDao(): ReporteDao // 👈 AÑADIR ESTO
 
     companion object {
         @Volatile
@@ -28,7 +34,8 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "safe_router_db"
-                ).build()
+                ).fallbackToDestructiveMigration() // 👈 Añadir esto ayuda a evitar fallos en el desorden
+                    .build()
                 INSTANCE = instance
                 instance
             }

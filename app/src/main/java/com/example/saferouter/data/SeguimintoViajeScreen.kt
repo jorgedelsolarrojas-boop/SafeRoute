@@ -35,6 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.saferouter.presentation.home.SecurityDetectionService 
 
 @Composable
 fun SeguimientoViajeScreen(
@@ -331,88 +332,110 @@ fun SeguimientoViajeScreen(
             }
 
             // Botón Iniciar/Finalizar viaje
-            Button(
-                onClick = {
-                    val fineLocationGranted = ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED ||
-                            ContextCompat.checkSelfPermission(
+            // Importación necesaria para el nuevo servicio
+
+
+            // ... (dentro de tu Composable SeguimientoViajeScreen)
+
+            // Botón Iniciar/Finalizar viaje
+                    Button(
+                        onClick = {
+                            val fineLocationGranted = ContextCompat.checkSelfPermission(
                                 context,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            ) == PackageManager.PERMISSION_GRANTED
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED ||
+                                    ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED
 
-                    if (!fineLocationGranted) {
-                        locationPermissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                        )
-                        return@Button
-                    }
+                            // Verificar permiso del acelerómetro (aunque no lo requiere explícitamente, es buena práctica)
+                            // Se asume que no se necesita permiso runtime para el acelerómetro, solo para la ubicación.
 
-                    val uid = FirebaseAuth.getInstance().currentUser?.uid
-                    if (uid == null) {
-                        Toast.makeText(context, "Debes iniciar sesión para usar esta función", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
+                            if (!fineLocationGranted) {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                                return@Button
+                            }
 
-                    if (destination.value.isEmpty() && !isTraveling) {
-                        Toast.makeText(context, "Por favor ingresa un destino", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
+                            val uid = FirebaseAuth.getInstance().currentUser?.uid
+                            if (uid == null) {
+                                Toast.makeText(context, "Debes iniciar sesión para usar esta función", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
 
-                    val database = FirebaseDatabase.getInstance().getReference("viajes/$uid/info")
+                            if (destination.value.isEmpty() && !isTraveling) {
+                                Toast.makeText(context, "Por favor ingresa un destino", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
 
-                    if (!isTraveling) {
-                        // Iniciar viaje
-                        val viajeInfo = mapOf(
-                            "destino" to destination.value,
-                            "horaInicio" to System.currentTimeMillis(),
-                            "tiempoEstimado" to estimatedTime.value,
-                            "estado" to "en_curso",
-                            "userUid" to uid,
-                            "userName" to (FirebaseAuth.getInstance().currentUser?.displayName ?: "Usuario")
-                        )
+                            val database = FirebaseDatabase.getInstance().getReference("viajes/$uid/info")
 
-                        database.setValue(viajeInfo).addOnSuccessListener {
-                            Toast.makeText(context, "✅ Viaje iniciado - Notificando contactos", Toast.LENGTH_SHORT).show()
-                            isTraveling = true
-                            val intent = Intent(context, TravelLocationService::class.java)
-                            startForegroundService(context, intent)
-                        }.addOnFailureListener {
-                            Toast.makeText(context, "❌ Error al iniciar viaje", Toast.LENGTH_SHORT).show()
-                        }
+                            if (!isTraveling) {
+                                // Iniciar viaje
+                                val viajeInfo = mapOf(
+                                    "destino" to destination.value,
+                                    "horaInicio" to System.currentTimeMillis(),
+                                    "tiempoEstimado" to estimatedTime.value,
+                                    "estado" to "en_curso",
+                                    "userUid" to uid,
+                                    "userName" to (FirebaseAuth.getInstance().currentUser?.displayName ?: "Usuario")
+                                )
 
-                    } else {
-                        // Finalizar viaje
-                        val finInfo = mapOf(
-                            "estado" to "finalizado",
-                            "horaFin" to System.currentTimeMillis()
-                        )
+                                database.setValue(viajeInfo).addOnSuccessListener {
+                                    Toast.makeText(context, "✅ Viaje iniciado - Servicios de seguridad y ubicación activos", Toast.LENGTH_LONG).show()
+                                    isTraveling = true
 
-                        database.updateChildren(finInfo).addOnSuccessListener {
-                            Toast.makeText(context, "✅ Viaje finalizado correctamente", Toast.LENGTH_SHORT).show()
-                            isTraveling = false
-                            destination.value = ""
-                            estimatedTime.value = "Ingresa un destino"
-                            val intent = Intent(context, TravelLocationService::class.java)
-                            context.stopService(intent)
-                        }.addOnFailureListener {
-                            Toast.makeText(context, "❌ Error al finalizar viaje", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = if (isTraveling) AlertRed else SuccessGreen
-                ),
-                shape = RoundedCornerShape(16.dp),
-                enabled = if (!isTraveling) destination.value.isNotEmpty() else true
-            ) {
+                                    // 1. INICIAR SERVICIO DE UBICACIÓN
+                                    val locationIntent = Intent(context, TravelLocationService::class.java)
+                                    startForegroundService(context, locationIntent)
+
+                                    // 2. INICIAR SERVICIO DE DETECCIÓN DE SEGURIDAD (¡NUEVO!)
+                                    // Esto activa el monitoreo de acelerómetro y prepara la detección de gritos/emergencia.
+                                    val securityIntent = Intent(context, SecurityDetectionService::class.java)
+                                    startForegroundService(context, securityIntent) // Lanzar como Foreground Service
+
+                                }.addOnFailureListener {
+                                    Toast.makeText(context, "❌ Error al iniciar viaje", Toast.LENGTH_SHORT).show()
+                                }
+
+                            } else {
+                                // Finalizar viaje
+                                val finInfo = mapOf(
+                                    "estado" to "finalizado",
+                                    "horaFin" to System.currentTimeMillis()
+                                )
+
+                                database.updateChildren(finInfo).addOnSuccessListener {
+                                    Toast.makeText(context, "✅ Viaje finalizado correctamente", Toast.LENGTH_SHORT).show()
+                                    isTraveling = false
+                                    destination.value = ""
+                                    estimatedTime.value = "Ingresa un destino"
+
+                                    // 1. FINALIZAR SERVICIO DE UBICACIÓN
+                                    context.stopService(Intent(context, TravelLocationService::class.java))
+
+                                    // 2. FINALIZAR SERVICIO DE DETECCIÓN DE SEGURIDAD (¡NUEVO!)
+                                    context.stopService(Intent(context, SecurityDetectionService::class.java))
+
+                                }.addOnFailureListener {
+                                    Toast.makeText(context, "❌ Error al finalizar viaje", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = if (isTraveling) AlertRed else SuccessGreen
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = if (!isTraveling) destination.value.isNotEmpty() else true
+                    ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
